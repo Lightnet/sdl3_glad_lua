@@ -16,7 +16,7 @@ static void push_event_constants(lua_State *L) {
     lua_setfield(L, -2, "constants");
 }
 
-// Lua: module_sdl.poll_events() -> table of events
+// Lua: sdl.poll_events() -> table of events
 static int sdl_poll_events(lua_State *L) {
     lua_newtable(L);
     int idx = 1;
@@ -32,11 +32,11 @@ static int sdl_poll_events(lua_State *L) {
             lua_pushinteger(L, (lua_Integer)event.key.key);
             lua_setfield(L, -2, "key");
         } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            lua_pushinteger(L, (lua_Integer)event.button.button);  // Fixed: event.button
+            lua_pushinteger(L, (lua_Integer)event.button.button);
             lua_setfield(L, -2, "button");
-            lua_pushinteger(L, (lua_Integer)event.button.x);  // Fixed
+            lua_pushinteger(L, (lua_Integer)event.button.x);
             lua_setfield(L, -2, "x");
-            lua_pushinteger(L, (lua_Integer)event.button.y);  // Fixed
+            lua_pushinteger(L, (lua_Integer)event.button.y);
             lua_setfield(L, -2, "y");
         }
         
@@ -45,31 +45,30 @@ static int sdl_poll_events(lua_State *L) {
     return 1;
 }
 
-// Lua: module_sdl.quit()
+// Lua: sdl.quit()
 static int sdl_quit(lua_State *L) {
     SDL_Quit();
     return 0;
 }
 
-// Lua: module_sdl.init_gl() -> bool, err_msg (proxies to module_gl)
+// Lua: sdl.init_gl() -> bool, err_msg (proxies to gl.init(), sets global "gl")
 static int sdl_init_gl(lua_State *L) {
-    // Require module_gl if not loaded
+    // Require module_gl and set as global "gl"
     lua_getglobal(L, "require");
     lua_pushstring(L, "module_gl");
-    lua_call(L, 1, 1);
-    lua_getfield(L, -1, "init");
+    lua_call(L, 1, 1);  // Returns module table
+    lua_pushvalue(L, -1);  // Duplicate for global
+    lua_setglobal(L, "gl");  // Set _G.gl = module_table
+    lua_getfield(L, -1, "init");  // Get init func (stack: module_gl, init)
     if (lua_isnil(L, -1)) {
         lua_pop(L, 2);  // Pop init and module_gl
         lua_pushboolean(L, 0);
-        lua_pushstring(L, "module_gl not available");
+        lua_pushstring(L, "module_gl.init not available");
         return 2;
     }
-    lua_pop(L, 1);  // Pop init
-    lua_pushvalue(L, -1);  // Duplicate module_gl table
-    lua_pushstring(L, "init");
-    lua_gettable(L, -2);
-    lua_call(L, 0, 2);  // Call module_gl.init() -> bool, err?
-    return 2;  // Return its results
+    // FIXED: Direct call to init (no extra pops/duplicates/inserts)
+    lua_call(L, 0, 2);  // Call init() -> bool, err (pops init, pushes results)
+    return 2;  // Return bool, err
 }
 
 static const struct luaL_Reg sdl_lib[] = {

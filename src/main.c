@@ -52,13 +52,15 @@ int main(int argc, char **argv) {
     lua_atpanic(L, lua_panic);
     luaL_openlibs(L);
 
-    // Load custom modules
+    // Load custom modules and set as globals (e.g., "sdl", "lua_util", "gl")
     luaL_requiref(L, "module_sdl", luaopen_module_sdl, 1);
-    lua_pop(L, 1);
+    lua_setglobal(L, "sdl");  // FIXED: Set as global "sdl"
+    
     luaL_requiref(L, "module_lua", luaopen_module_lua, 1);
-    lua_pop(L, 1);
+    lua_setglobal(L, "lua_util");  // FIXED: Set as "lua_util" (matches module_lua)
+    
     luaL_requiref(L, "module_gl", luaopen_module_gl, 1);
-    lua_pop(L, 1);
+    lua_setglobal(L, "gl");  // FIXED: Set as global "gl"
 
     lua_pushlightuserdata(L, window);
     lua_setglobal(L, "sdl_window");
