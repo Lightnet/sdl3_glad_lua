@@ -144,6 +144,7 @@ set(SRC_FILES
     src/module_sdl.c
     src/module_lua.c
     src/module_gl.c
+    src/module_imgui.c
     glad/src/gl.c
 )
 

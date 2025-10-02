@@ -1,6 +1,9 @@
 #include "module_sdl.h"
 #include <SDL3/SDL.h>
+#include <cimgui.h>  // New: For ImGui_ImplSDL3_ProcessEvent
+#include <cimgui_impl.h>
 #include <lauxlib.h>
+
 
 // Helper: Push event constants table
 static void push_event_constants(lua_State *L) {
@@ -22,6 +25,9 @@ static int sdl_poll_events(lua_State *L) {
     int idx = 1;
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        // New: Process event for ImGui input
+        ImGui_ImplSDL3_ProcessEvent(&event);
+
         lua_pushinteger(L, idx++);
         lua_newtable(L);
         

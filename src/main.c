@@ -1,6 +1,7 @@
 #include "module_sdl.h"
 #include "module_lua.h"
 #include "module_gl.h"
+#include "module_imgui.h"
 #include <SDL3/SDL.h>
 #include <lua.h>
 #include <lauxlib.h>
@@ -61,6 +62,10 @@ int main(int argc, char **argv) {
     
     luaL_requiref(L, "module_gl", luaopen_module_gl, 1);
     lua_setglobal(L, "gl");  // FIXED: Set as global "gl"
+
+    // New: Load ImGui
+    luaL_requiref(L, "module_imgui", luaopen_module_imgui, 1);
+    lua_setglobal(L, "imgui");
 
     lua_pushlightuserdata(L, window);
     lua_setglobal(L, "sdl_window");
