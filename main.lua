@@ -1,11 +1,24 @@
 -- main.lua
 
 local sdl = require("module_sdl")
-gl = require("module_gl") -- Remove 'local' to set _G.gl
+gl = require("module_gl") -- Global to ensure _G.gl is set for gl_init
 local lua_util = require("lua_util")
 
+-- Initialize SDL video subsystem (required for window creation)
+-- In headless mode, this could be skipped
+SDL_Init = SDL_Init or function(subsystems) end -- Fallback if not available
+SDL_Init(0x00000020) -- SDL_INIT_VIDEO
+
+-- Create window with OpenGL and resizable flags
+local success, err = sdl.init_window(800, 600, sdl.constants.SDL_WINDOW_OPENGL + sdl.constants.SDL_WINDOW_RESIZABLE)
+if not success then
+    lua_util.log("Failed to create window: " .. err)
+    sdl.quit()
+    return
+end
+
 -- Initialize OpenGL
-local success, err = gl.init()
+success, err = gl.init()
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
     sdl.quit()
@@ -21,12 +34,12 @@ void main() {
 }
 ]]
 
--- Fragment Shader
+-- Fragment Shader (fixed comment syntax)
 local fragmentShaderSource = [[
 #version 330 core
 out vec4 FragColor;
 void main() {
-    FragColor = vec4(1.0, 0.5, 0.2, 1.0); //-- Orange color
+    FragColor = vec4(1.0, 0.5, 0.2, 1.0); // Orange color
 }
 ]]
 
