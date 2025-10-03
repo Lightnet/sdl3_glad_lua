@@ -1,16 +1,48 @@
 -- main.lua
 
 local sdl = require("module_sdl")
-local gl = require("module_gl")
+gl = require("module_gl") -- Global to ensure _G.gl is set for gl_init
+local imgui = require("module_imgui")
+
 local lua_util = require("lua_util")
 
+-- Initialize SDL video subsystem
+local success, err = sdl.init(sdl.constants.SDL_INIT_VIDEO)
+if not success then
+    lua_util.log("Failed to initialize SDL: " .. err)
+    sdl.quit()
+    return
+end
+
+-- Create window with OpenGL and resizable flags
+success, err = sdl.init_window(800, 600, sdl.constants.SDL_WINDOW_OPENGL + sdl.constants.SDL_WINDOW_RESIZABLE)
+if not success then
+    lua_util.log("Failed to create window: " .. err)
+    sdl.quit()
+    return
+end
+
 -- Initialize OpenGL
-local success, err = sdl.init_gl()
+success, err = gl.init()
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
     sdl.quit()
     return
 end
+
+-- Demo: Access stored context
+-- if gl.gl_context then
+--     util.log("GL context stored: " .. tostring(gl.gl_context))
+-- else
+--     util.log("GL context not stored (error)")
+-- end
+
+-- Initialize ImGui
+-- local success, err = imgui.init(window, gl.gl_context)
+-- if not success then
+--     print("Failed to initialize ImGui: " .. err)
+--     return
+-- end
 
 -- Vertex Shader
 local vertexShaderSource = [[
@@ -21,7 +53,7 @@ void main() {
 }
 ]]
 
--- Fragment Shader
+-- Fragment Shader (fixed comment)
 local fragmentShaderSource = [[
 #version 330 core
 out vec4 FragColor;
@@ -33,9 +65,10 @@ void main() {
 -- Create and compile vertex shader
 local vertexShader = gl.create_shader(gl.constants.VERTEX_SHADER)
 gl.shader_source(vertexShader, vertexShaderSource)
-local success, err = gl.compile_shader(vertexShader)
+success, err = gl.compile_shader(vertexShader)
 if not success then
     lua_util.log("Vertex shader compilation failed: " .. err)
+    gl.destroy()
     sdl.quit()
     return
 end
@@ -46,6 +79,7 @@ gl.shader_source(fragmentShader, fragmentShaderSource)
 success, err = gl.compile_shader(fragmentShader)
 if not success then
     lua_util.log("Fragment shader compilation failed: " .. err)
+    gl.destroy()
     sdl.quit()
     return
 end
@@ -57,6 +91,7 @@ gl.attach_shader(shaderProgram, fragmentShader)
 success, err = gl.link_program(shaderProgram)
 if not success then
     lua_util.log("Shader program linking failed: " .. err)
+    gl.destroy()
     sdl.quit()
     return
 end
@@ -85,6 +120,9 @@ gl.buffer_data(gl.constants.ARRAY_BUFFER, vertexData, #vertexData, gl.constants.
 -- Set vertex attributes
 gl.vertex_attrib_pointer(0, 3, gl.constants.FLOAT, false, 3 * 4, 0)
 gl.enable_vertex_attrib_array(0)
+
+-- Set initial viewport
+gl.viewport(0, 0, 800, 600)
 
 -- Main loop
 local running = true

@@ -166,12 +166,14 @@ message(STATUS "cimgui_SOURCE_DIR: >> ${cimgui_SOURCE_DIR}")
 # Create executable
 add_executable(${APP_NAME}
     ${SRC_FILES}
-    src/main.c
     # glad/src/gl.c
+    src/main.c
+    # examples/sdl3_gl_check.c
+    # src/check_sdl_buffer.c
+    # src/check_sdl_buffer03.c
     # src/triangle.c
     # src/server.c
     # src/sdl3_cimgui.c
-    
 )
 
 # SDL3 
@@ -224,58 +226,58 @@ endif()
 # configure_file("script.lua" "${CMAKE_BINARY_DIR}/script.lua" COPYONLY)
 
 
-set(APP_EX triangle)
+# set(APP_EX triangle)
 
-set(SRC_EX_FILES
-    # Add other .c files here if necessary
-    glad/src/gl.c
-)
+# set(SRC_EX_FILES
+#     # Add other .c files here if necessary
+#     glad/src/gl.c
+# )
 
-add_executable(${APP_EX}
-    ${SRC_EX_FILES}
-    glad/src/gl.c
-    src/triangle.c
-)
-target_link_libraries(${APP_EX} PUBLIC 
-    SDL3::SDL3                      # SDL 3.2.22
-    custom_cimgui                   # custom cimgui for sdl3 and opengl3, 1.92.1 or master
-    lua                             # 5.4
-)
+# add_executable(${APP_EX}
+#     ${SRC_EX_FILES}
+#     glad/src/gl.c
+#     src/triangle.c
+# )
+# target_link_libraries(${APP_EX} PUBLIC 
+#     SDL3::SDL3                      # SDL 3.2.22
+#     custom_cimgui                   # custom cimgui for sdl3 and opengl3, 1.92.1 or master
+#     lua                             # 5.4
+# )
 
-target_include_directories(${APP_EX} PUBLIC
-    ${CMAKE_SOURCE_DIR}/glad/include            # glad
-    ${CMAKE_SOURCE_DIR}/include                 # root project
-    ${cimgui_SOURCE_DIR}                        # cimgui
-    ${cimgui_SOURCE_DIR}/imgui                  # imgui
-    ${cimgui_SOURCE_DIR}/imgui/backends         # imgui/backends
-    ${SDL3_SOURCE_DIR}/include                  # SDL 3.2.22
-    ${lua_SOURCE_DIR}/include                   # lua
-    ${enet_SOURCE_DIR}/include                  # enet
-)
+# target_include_directories(${APP_EX} PUBLIC
+#     ${CMAKE_SOURCE_DIR}/glad/include            # glad
+#     ${CMAKE_SOURCE_DIR}/include                 # root project
+#     ${cimgui_SOURCE_DIR}                        # cimgui
+#     ${cimgui_SOURCE_DIR}/imgui                  # imgui
+#     ${cimgui_SOURCE_DIR}/imgui/backends         # imgui/backends
+#     ${SDL3_SOURCE_DIR}/include                  # SDL 3.2.22
+#     ${lua_SOURCE_DIR}/include                   # lua
+#     ${enet_SOURCE_DIR}/include                  # enet
+# )
 
-target_compile_definitions(
-	${APP_EX}
-	PUBLIC
-    #IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1
-	CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1
-	CIMGUI_USE_SDL3=1
-	CIMGUI_USE_OPENGL3=1
-    ENET_IMPLEMENTATION=1                   #enet
-)
+# target_compile_definitions(
+# 	${APP_EX}
+# 	PUBLIC
+#     #IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1
+# 	CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1
+# 	CIMGUI_USE_SDL3=1
+# 	CIMGUI_USE_OPENGL3=1
+#     ENET_IMPLEMENTATION=1                   #enet
+# )
 
-if (WIN32)
-    # Link necessary Windows libraries for raylib
-    target_link_libraries(${APP_EX} PRIVATE
-        opengl32                                # opengl
-        gdi32                                   # Windows Graphics Device Interface 
-        winmm                                   # Windows Multimedia API 
-        ws2_32                                  # Winsock 2
-    )
+# if (WIN32)
+#     # Link necessary Windows libraries for raylib
+#     target_link_libraries(${APP_EX} PRIVATE
+#         opengl32                                # opengl
+#         gdi32                                   # Windows Graphics Device Interface 
+#         winmm                                   # Windows Multimedia API 
+#         ws2_32                                  # Winsock 2
+#     )
 
-    # Static linking for libgcc and libstdc++
-    target_link_options(${APP_EX} PRIVATE
-        -static-libgcc                          # GNU Compiler Collection
-        -static-libstdc++                       # Uncomment if C++ code is used
-        -static                                 # Avoid full static linking to prevent issues with system libraries
-    )
-endif()
+#     # Static linking for libgcc and libstdc++
+#     target_link_options(${APP_EX} PRIVATE
+#         -static-libgcc                          # GNU Compiler Collection
+#         -static-libstdc++                       # Uncomment if C++ code is used
+#         -static                                 # Avoid full static linking to prevent issues with system libraries
+#     )
+# endif()

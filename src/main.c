@@ -27,15 +27,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // Initialize SDL with minimal subsystems (can be extended in Lua)
-    if (SDL_Init(0) < 0) {
-        fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
-        return 1;
-    }
-
     lua_State *L = luaL_newstate();
     if (!L) {
-        SDL_Quit();
         return 1;
     }
     lua_atpanic(L, lua_panic);
@@ -51,8 +44,8 @@ int main(int argc, char **argv) {
     lua_setfield(L, -2, "lua_util");
     lua_pushcfunction(L, luaopen_module_gl);
     lua_setfield(L, -2, "module_gl");
-    // lua_pushcfunction(L, luaopen_module_imgui);
-    // lua_setfield(L, -2, "module_imgui");
+    lua_pushcfunction(L, luaopen_module_imgui);
+    lua_setfield(L, -2, "module_imgui");
     lua_pushcfunction(L, luaopen_module_enet);
     lua_setfield(L, -2, "module_enet");
 
@@ -62,12 +55,10 @@ int main(int argc, char **argv) {
     if (luaL_dofile(L, lua_script) != LUA_OK) {
         fprintf(stderr, "Error running '%s': %s\n", lua_script, lua_tostring(L, -1));
         lua_close(L);
-        SDL_Quit();
         return 1;
     }
 
     // Cleanup
     lua_close(L);
-    SDL_Quit();
     return 0;
 }
