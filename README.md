@@ -7,13 +7,15 @@
 - Lua 5.4
 - cimgui 1.92
 - Glad 2.0.8
+- zpl-c/enet v2.6.5
 
 # Status:
 - prototype.
 
-# SDL3-Lua OpenGL Prototype
+# SDL3-Lua OpenGL Prototype:
 
-OverviewThis project is a prototype build integrating SDL 3, Glad 2.0 (for OpenGL loading), cimgui 1.92 (for ImGui-based UI), and Lua 5.4 as the primary scripting engine. The core C/C++ application serves as a lightweight runtime host, delegating nearly all scene setup, rendering, and interaction logic to Lua scripts. This allows for dynamic development of 2D/3D OpenGL scenes and an in-app editor without recompiling the binary. Key design principle: Emulate C-like control flow and OpenGL API exposure in Lua, enabling script-only modifications. Users can "execute to iterate" – load and run Lua scripts at runtime for immediate testing, with no build step required for core features.
+## Overview:
+This project is a prototype build integrating SDL 3, Glad 2.0 (for OpenGL loading), cimgui 1.92 (for ImGui-based UI), and Lua 5.4 as the primary scripting engine. The core C/C++ application serves as a lightweight runtime host, delegating nearly all scene setup, rendering, and interaction logic to Lua scripts. This allows for dynamic development of 2D/3D OpenGL scenes and an in-app editor without recompiling the binary. Key design principle: Emulate C-like control flow and OpenGL API exposure in Lua, enabling script-only modifications. Users can "execute to iterate" – load and run Lua scripts at runtime for immediate testing, with no build step required for core features.
 
 This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fuller API exposure for rapid prototyping, with AI-assisted refinements ( Grok for Vulkan/OpenGL bridging ideas and search engine from other devs.).
 
@@ -25,6 +27,21 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
 - Simplicity First: Prioritize readable, concise Lua APIs that feel like "C in Lua" – e.g., direct calls to gl.BindTexture() equivalents – while keeping the host binary under 5MB.
 - Runtime Iteration: Scripts load/execute on-the-fly; hot-reload scenes during playtesting for game dev workflows.
 
+# Lua Features:
+- [x] imgui simple
+- [x] opengl glad 2.0
+- [x] sdl 3.2
+- [x] lua 5.4
+- [x] shaders
+- [x] triangle 2D
+- [ ] network
+- [ ] ...
+
+# Examples:
+- server.lua
+- client.lua
+- main.lua
+- ...
 
 # Credits:
 - Grok AI on x.

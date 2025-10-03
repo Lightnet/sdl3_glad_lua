@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(sdl3_cimgui_opengl3)
+project(sdl3_glad_lua)
 
 # Set output directories
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
@@ -131,8 +131,6 @@ set(LUA_SRC
 add_library(lua STATIC ${LUA_SRC})
 target_include_directories(lua PUBLIC ${lua_SOURCE_DIR})
 
-
-
 #================================================
 # ENET
 #================================================
@@ -144,8 +142,6 @@ FetchContent_Declare(
 )
 set(ENET_TEST  OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(enet)
-
-
 
 #================================================
 # APP
@@ -171,6 +167,8 @@ message(STATUS "cimgui_SOURCE_DIR: >> ${cimgui_SOURCE_DIR}")
 add_executable(${APP_NAME}
     ${SRC_FILES}
     src/main.c
+    # glad/src/gl.c
+    # src/triangle.c
     # src/server.c
     # src/sdl3_cimgui.c
     
@@ -209,18 +207,75 @@ target_compile_definitions(
 if (WIN32)
     # Link necessary Windows libraries for raylib
     target_link_libraries(${APP_NAME} PRIVATE
-        opengl32
-        gdi32
-        winmm
-        ws2_32 # network lib
+        opengl32                                        # opengl
+        gdi32                                           # Windows Graphics Device Interface
+        winmm                                           # Windows Multimedia API 
+        ws2_32                                          # Winsock 2
     )
 
     # Static linking for libgcc and libstdc++
     target_link_options(${APP_NAME} PRIVATE
-        -static-libgcc
-        -static-libstdc++  # Uncomment if C++ code is used
-        -static           # Avoid full static linking to prevent issues with system libraries
+        -static-libgcc                                  # GNU Compiler Collection
+        -static-libstdc++                               # Uncomment if C++ code is used # need for imgui
+        -static                                         # Avoid full static linking to prevent issues with system libraries
     )
 endif()
 
 # configure_file("script.lua" "${CMAKE_BINARY_DIR}/script.lua" COPYONLY)
+
+
+set(APP_EX triangle)
+
+set(SRC_EX_FILES
+    # Add other .c files here if necessary
+    glad/src/gl.c
+)
+
+add_executable(${APP_EX}
+    ${SRC_EX_FILES}
+    glad/src/gl.c
+    src/triangle.c
+)
+target_link_libraries(${APP_EX} PUBLIC 
+    SDL3::SDL3                      # SDL 3.2.22
+    custom_cimgui                   # custom cimgui for sdl3 and opengl3, 1.92.1 or master
+    lua                             # 5.4
+)
+
+target_include_directories(${APP_EX} PUBLIC
+    ${CMAKE_SOURCE_DIR}/glad/include            # glad
+    ${CMAKE_SOURCE_DIR}/include                 # root project
+    ${cimgui_SOURCE_DIR}                        # cimgui
+    ${cimgui_SOURCE_DIR}/imgui                  # imgui
+    ${cimgui_SOURCE_DIR}/imgui/backends         # imgui/backends
+    ${SDL3_SOURCE_DIR}/include                  # SDL 3.2.22
+    ${lua_SOURCE_DIR}/include                   # lua
+    ${enet_SOURCE_DIR}/include                  # enet
+)
+
+target_compile_definitions(
+	${APP_EX}
+	PUBLIC
+    #IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1
+	CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1
+	CIMGUI_USE_SDL3=1
+	CIMGUI_USE_OPENGL3=1
+    ENET_IMPLEMENTATION=1                   #enet
+)
+
+if (WIN32)
+    # Link necessary Windows libraries for raylib
+    target_link_libraries(${APP_EX} PRIVATE
+        opengl32                                # opengl
+        gdi32                                   # Windows Graphics Device Interface 
+        winmm                                   # Windows Multimedia API 
+        ws2_32                                  # Winsock 2
+    )
+
+    # Static linking for libgcc and libstdc++
+    target_link_options(${APP_EX} PRIVATE
+        -static-libgcc                          # GNU Compiler Collection
+        -static-libstdc++                       # Uncomment if C++ code is used
+        -static                                 # Avoid full static linking to prevent issues with system libraries
+    )
+endif()
