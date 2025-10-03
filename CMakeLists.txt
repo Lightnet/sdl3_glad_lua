@@ -131,6 +131,22 @@ set(LUA_SRC
 add_library(lua STATIC ${LUA_SRC})
 target_include_directories(lua PUBLIC ${lua_SOURCE_DIR})
 
+
+
+#================================================
+# ENET
+#================================================
+FetchContent_Declare(
+    enet
+    GIT_REPOSITORY https://github.com/zpl-c/enet.git
+    GIT_TAG v2.6.5
+    GIT_SHALLOW TRUE
+)
+set(ENET_TEST  OFF CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(enet)
+
+
+
 #================================================
 # APP
 #================================================
@@ -145,6 +161,7 @@ set(SRC_FILES
     src/module_lua.c
     src/module_gl.c
     src/module_imgui.c
+    src/module_enet.c
     glad/src/gl.c
 )
 
@@ -152,9 +169,11 @@ message(STATUS "cimgui_SOURCE_DIR: >> ${cimgui_SOURCE_DIR}")
 
 # Create executable
 add_executable(${APP_NAME}
-    src/main.c
-    # src/sdl3_cimgui.c
     ${SRC_FILES}
+    src/main.c
+    # src/server.c
+    # src/sdl3_cimgui.c
+    
 )
 
 # SDL3 
@@ -172,6 +191,7 @@ target_include_directories(${APP_NAME} PUBLIC
     ${cimgui_SOURCE_DIR}/imgui/backends         # imgui/backends
     ${SDL3_SOURCE_DIR}/include                  # SDL 3.2.22
     ${lua_SOURCE_DIR}/include                   # lua
+    ${enet_SOURCE_DIR}/include                  # enet
 )
 
 # for c #define
@@ -182,6 +202,7 @@ target_compile_definitions(
 	CIMGUI_DEFINE_ENUMS_AND_STRUCTS=1
 	CIMGUI_USE_SDL3=1
 	CIMGUI_USE_OPENGL3=1
+    ENET_IMPLEMENTATION=1                   #enet
 )
 
 # Platform-specific settings for Windows (MinGW/MSYS2)
@@ -191,6 +212,7 @@ if (WIN32)
         opengl32
         gdi32
         winmm
+        ws2_32 # network lib
     )
 
     # Static linking for libgcc and libstdc++

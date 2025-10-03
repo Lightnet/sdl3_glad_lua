@@ -2,6 +2,7 @@
 #include "module_lua.h"
 #include "module_gl.h"
 #include "module_imgui.h"
+#include "module_enet.h"
 #include <SDL3/SDL.h>
 #include <lua.h>
 #include <lauxlib.h>
@@ -66,6 +67,9 @@ int main(int argc, char **argv) {
     // New: Load ImGui
     luaL_requiref(L, "module_imgui", luaopen_module_imgui, 1);
     lua_setglobal(L, "imgui");
+
+    luaL_requiref(L, "module_enet", luaopen_module_enet, 1);
+    lua_setglobal(L, "enet");
 
     lua_pushlightuserdata(L, window);
     lua_setglobal(L, "sdl_window");
