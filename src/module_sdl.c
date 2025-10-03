@@ -6,7 +6,6 @@
 
 // Helper: Push event and subsystem constants table
 static void push_event_constants(lua_State *L) {
-    lua_newtable(L);
     // Event constants
     lua_pushinteger(L, SDL_EVENT_QUIT);
     lua_setfield(L, -2, "SDL_EVENT_QUIT");
@@ -19,8 +18,6 @@ static void push_event_constants(lua_State *L) {
     // Window flags
     lua_pushinteger(L, SDL_WINDOW_OPENGL);
     lua_setfield(L, -2, "SDL_WINDOW_OPENGL");
-    // lua_pushinteger(L, SDL_WINDOW_HEADLESS);
-    // lua_setfield(L, -2, "SDL_WINDOW_HEADLESS");
     lua_pushinteger(L, SDL_WINDOW_RESIZABLE);
     lua_setfield(L, -2, "SDL_WINDOW_RESIZABLE");
     // Subsystem flags
@@ -30,7 +27,6 @@ static void push_event_constants(lua_State *L) {
     lua_setfield(L, -2, "SDL_INIT_EVENTS");
     lua_pushinteger(L, 0);
     lua_setfield(L, -2, "SDL_INIT_NONE");
-    lua_setfield(L, -2, "constants");
 }
 
 // Lua: sdl.init(subsystems) -> bool, err_msg

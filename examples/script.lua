@@ -1,23 +1,77 @@
--- main.lua: Base Lua script for SDL3 window
+-- main.lua: Base Lua script for SDL3+GL window
+-- Globals: sdl, gl, lua_util (set by C); locals via require for overrides
 local sdl = require("module_sdl")
-local util = require("module_lua")
+gl = require("module_gl")
+local lua_util = require("lua_util")
 
-util.log("Starting Lua script...")
-
--- Check if another path exists (demo)
-if util.path_exists("somefile.txt") then
-    util.log("somefile.txt found!")
+-- Initialize SDL with video and events subsystems
+local success, err = sdl.init(sdl.SDL_INIT_VIDEO + sdl.SDL_INIT_EVENTS)
+if not success then
+    print("SDL init failed: " .. err)
+    return
 end
 
--- Simple event handler
-while true do
+-- Create an SDL window with OpenGL support
+success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+if not success then
+    print("Window creation failed: " .. err)
+    sdl.quit()
+    return
+end
+
+-- Initialize OpenGL context
+success, err = gl.init()
+if not success then
+    print("OpenGL init failed: " .. err)
+    sdl.quit()
+    return
+end
+
+-- Get the OpenGL context
+local gl_context, err = gl.get_gl_context()
+if not gl_context then
+    print("Failed to get GL context: " .. err)
+    gl.destroy()
+    sdl.quit()
+    return
+end
+
+
+-- -- Check path (demo)
+-- if util.path_exists("somefile.txt") then
+--     util.log("somefile.txt found!")
+-- end
+
+-- Main loop: Events + Render + Swap
+local running = true
+while running do
     local events = sdl.poll_events()
     for i = 1, #events do
         local ev = events[i]
-        if ev.type == "SDL_EVENT_QUIT" then
+        if ev.type == sdl.SDL_EVENT_QUIT then
             util.log("Quit event!")
-            sdl.quit()
-            return
+            running = false
+        elseif ev.type == sdl.SDL_EVENT_KEY_DOWN then
+            util.log("Key down: " .. (ev.key or "unknown"))
+            if ev.key == 27 then  -- ESC to quit
+                running = false
+            end
+        elseif ev.type == sdl.SDL_EVENT_MOUSE_BUTTON_DOWN then
+            util.log("Mouse button " .. ev.button .. " at (" .. ev.x .. ", " .. ev.y .. ")")
         end
     end
+
+    -- Render: Clear to teal, viewport, clear, swap
+    gl.clear_color(0.2, 0.3, 0.3, 1.0)  -- Dark teal
+    gl.viewport(0, 0, 800, 600)
+    gl.clear()
+    gl.swap_buffers()
+
+    -- -- ~60 FPS delay
+    -- local start_time = os.clock()
+    -- while os.clock() - start_time < 1/60 do end
 end
+
+-- Cleanup on exit
+gl.destroy()
+sdl.quit()

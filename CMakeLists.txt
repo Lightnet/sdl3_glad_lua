@@ -158,6 +158,7 @@ set(SRC_FILES
     src/module_gl.c
     src/module_imgui.c
     src/module_enet.c
+    src/module_test.c
     glad/src/gl.c
 )
 

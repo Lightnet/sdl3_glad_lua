@@ -1,6 +1,11 @@
 # sdl3_glad_lua
 
-# license: MIT
+# License: MIT
+
+# Programing Language:
+- c programing language
+- lua 
+- cmake ( build config )
 
 # libraries:
 - SDL 3.2
@@ -51,14 +56,14 @@ gl = require("module_gl") -- can't use local due config in module_gl.c need rewo
 local imgui = require("module_imgui")
 
 -- Initialize SDL with video and events subsystems
-local success, err = sdl.init(sdl.constants.SDL_INIT_VIDEO + sdl.constants.SDL_INIT_EVENTS)
+local success, err = sdl.init(sdl.SDL_INIT_VIDEO + sdl.SDL_INIT_EVENTS)
 if not success then
     print("SDL init failed: " .. err)
     return
 end
 
 -- Create an SDL window with OpenGL support
-success, err = sdl.init_window(800, 600, sdl.constants.SDL_WINDOW_OPENGL + sdl.constants.SDL_WINDOW_RESIZABLE)
+success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
 if not success then
     print("Window creation failed: " .. err)
     sdl.quit()
@@ -88,9 +93,9 @@ while running do
     -- Poll SDL events
     local events = sdl.poll_events_ig() -- Use poll_events_ig to process ImGui inputs
     for i, event in ipairs(events) do
-        if event.type == sdl.constants.SDL_EVENT_QUIT then
+        if event.type == sdl.SDL_EVENT_QUIT then
             running = false
-        elseif event.type == sdl.constants.SDL_EVENT_WINDOW_RESIZED then
+        elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
             gl.viewport(0, 0, event.width, event.height)
         end
     end
@@ -127,6 +132,8 @@ sdl.quit()
 ```
   The Grok AI agent keep it simple still need to refine some api to make it easy later.
 
+# Bugs:
+- Note that SDL 3.2.22 basic set up for SDL_GL_DOUBLEBUFFER, SDL_GL_DEPTH_SIZE and other but not for SDL_GL_CONTEXT_MAJOR_VERSION and SDL_GL_CONTEXT_MINOR_VERSION. Unless I config it wrong but check on SDL 2.x which is working on simple test.
 
 # Credits:
 - Grok AI on x.

@@ -149,7 +149,6 @@ static int gl_destroy(lua_State *L) {
     return 0;
 }
 
-
 // Shader functions
 static int gl_create_shader(lua_State *L) {
     GLenum type = (GLenum)luaL_checkinteger(L, 1);
@@ -311,7 +310,7 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushnil(L);
     lua_setfield(L, -2, "gl_context");
     // Add constants
-    lua_newtable(L);
+    // lua_newtable(L);
     lua_pushinteger(L, GL_VERTEX_SHADER); lua_setfield(L, -2, "VERTEX_SHADER");
     lua_pushinteger(L, GL_FRAGMENT_SHADER); lua_setfield(L, -2, "FRAGMENT_SHADER");
     lua_pushinteger(L, GL_ARRAY_BUFFER); lua_setfield(L, -2, "ARRAY_BUFFER");
@@ -320,6 +319,6 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_TRIANGLES); lua_setfield(L, -2, "TRIANGLES");
     lua_pushinteger(L, GL_COLOR_BUFFER_BIT); lua_setfield(L, -2, "COLOR_BUFFER_BIT");
     lua_pushinteger(L, GL_DEPTH_BUFFER_BIT); lua_setfield(L, -2, "DEPTH_BUFFER_BIT");
-    lua_setfield(L, -2, "constants");
+    // lua_setfield(L, -2, "constants");
     return 1;
 }

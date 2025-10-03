@@ -4,14 +4,14 @@ gl = require("module_gl")
 local imgui = require("module_imgui")
 
 -- Initialize SDL with video and events subsystems
-local success, err = sdl.init(sdl.constants.SDL_INIT_VIDEO + sdl.constants.SDL_INIT_EVENTS)
+local success, err = sdl.init(sdl.SDL_INIT_VIDEO + sdl.SDL_INIT_EVENTS)
 if not success then
     print("SDL init failed: " .. err)
     return
 end
 
 -- Create an SDL window with OpenGL support
-success, err = sdl.init_window(800, 600, sdl.constants.SDL_WINDOW_OPENGL + sdl.constants.SDL_WINDOW_RESIZABLE)
+success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
 if not success then
     print("Window creation failed: " .. err)
     sdl.quit()
@@ -41,9 +41,9 @@ while running do
     -- Poll SDL events
     local events = sdl.poll_events_ig() -- Use poll_events_ig to process ImGui inputs
     for i, event in ipairs(events) do
-        if event.type == sdl.constants.SDL_EVENT_QUIT then
+        if event.type == sdl.SDL_EVENT_QUIT then
             running = false
-        elseif event.type == sdl.constants.SDL_EVENT_WINDOW_RESIZED then
+        elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
             gl.viewport(0, 0, event.width, event.height)
         end
     end

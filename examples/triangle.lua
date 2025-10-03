@@ -7,7 +7,7 @@ local imgui = require("module_imgui")
 local lua_util = require("lua_util")
 
 -- Initialize SDL video subsystem
-local success, err = sdl.init(sdl.constants.SDL_INIT_VIDEO)
+local success, err = sdl.init(sdl.SDL_INIT_VIDEO)
 if not success then
     lua_util.log("Failed to initialize SDL: " .. err)
     sdl.quit()
@@ -15,7 +15,7 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-success, err = sdl.init_window(800, 600, sdl.constants.SDL_WINDOW_OPENGL + sdl.constants.SDL_WINDOW_RESIZABLE)
+success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
 if not success then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
@@ -63,7 +63,7 @@ void main() {
 ]]
 
 -- Create and compile vertex shader
-local vertexShader = gl.create_shader(gl.constants.VERTEX_SHADER)
+local vertexShader = gl.create_shader(gl.VERTEX_SHADER)
 gl.shader_source(vertexShader, vertexShaderSource)
 success, err = gl.compile_shader(vertexShader)
 if not success then
@@ -74,7 +74,7 @@ if not success then
 end
 
 -- Create and compile fragment shader
-local fragmentShader = gl.create_shader(gl.constants.FRAGMENT_SHADER)
+local fragmentShader = gl.create_shader(gl.FRAGMENT_SHADER)
 gl.shader_source(fragmentShader, fragmentShaderSource)
 success, err = gl.compile_shader(fragmentShader)
 if not success then
@@ -114,11 +114,11 @@ local vao = gl.gen_vertex_arrays()
 gl.bind_vertex_array(vao)
 
 local vbo = gl.gen_buffers()
-gl.bind_buffer(gl.constants.ARRAY_BUFFER, vbo)
-gl.buffer_data(gl.constants.ARRAY_BUFFER, vertexData, #vertexData, gl.constants.STATIC_DRAW)
+gl.bind_buffer(gl.ARRAY_BUFFER, vbo)
+gl.buffer_data(gl.ARRAY_BUFFER, vertexData, #vertexData, gl.STATIC_DRAW)
 
 -- Set vertex attributes
-gl.vertex_attrib_pointer(0, 3, gl.constants.FLOAT, false, 3 * 4, 0)
+gl.vertex_attrib_pointer(0, 3, gl.FLOAT, false, 3 * 4, 0)
 gl.enable_vertex_attrib_array(0)
 
 -- Set initial viewport
@@ -130,9 +130,9 @@ while running do
     -- Handle events
     local events = sdl.poll_events()
     for i, event in ipairs(events) do
-        if event.type == sdl.constants.SDL_EVENT_QUIT then
+        if event.type == sdl.SDL_EVENT_QUIT then
             running = false
-        elseif event.type == sdl.constants.SDL_EVENT_WINDOW_RESIZED then
+        elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
             gl.viewport(0, 0, event.width, event.height)
         end
     end
@@ -143,7 +143,7 @@ while running do
 
     gl.use_program(shaderProgram)
     gl.bind_vertex_array(vao)
-    gl.draw_arrays(gl.constants.TRIANGLES, 0, 3)
+    gl.draw_arrays(gl.TRIANGLES, 0, 3)
 
     gl.swap_buffers()
 end
