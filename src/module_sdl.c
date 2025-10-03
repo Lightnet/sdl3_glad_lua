@@ -68,16 +68,16 @@ static int sdl_init_window(lua_State *L) {
         };
         for (int i = 0; i < sizeof(attrs) / sizeof(attrs[0]); i++) {
             if (SDL_GL_SetAttribute(attrs[i].attr, attrs[i].value) < 0) {
-                fprintf(stderr, "Failed to set %s: %s\n", attrs[i].name, SDL_GetError());
+                // fprintf(stderr, "Failed to set %s: %s\n", attrs[i].name, SDL_GetError());
             } else {
                 int set_value;
                 if (SDL_GL_GetAttribute(attrs[i].attr, &set_value) < 0) {
-                    fprintf(stderr, "Failed to get %s: %s\n", attrs[i].name, SDL_GetError());
+                    // fprintf(stderr, "Failed to get %s: %s\n", attrs[i].name, SDL_GetError());
                 } else {
                     printf("Set %s to %d\n", attrs[i].name, set_value);
                     if (set_value != attrs[i].value) {
-                        fprintf(stderr, "Warning: %s set to %d, expected %d\n", 
-                                attrs[i].name, set_value, attrs[i].value);
+                        // fprintf(stderr, "Warning: %s set to %d, expected %d\n", 
+                        //         attrs[i].name, set_value, attrs[i].value);
                     }
                 }
             }

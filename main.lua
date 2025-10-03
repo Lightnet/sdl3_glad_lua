@@ -1,4 +1,4 @@
--- Load required modules
+-- Load modules as local variables
 local sdl = require("module_sdl")
 gl = require("module_gl")
 local imgui = require("module_imgui")
@@ -26,8 +26,19 @@ if not success then
     return
 end
 
+-- gl.get_gl_context()
+
+-- Get the OpenGL context
+local gl_context, err = gl.get_gl_context()
+if not gl_context then
+    print("Failed to get GL context: " .. err)
+    gl.destroy()
+    sdl.quit()
+    return
+end
+
 -- Initialize ImGui with sdl_window and gl_context
-success, err = imgui.init(_G.sdl_window, gl.gl_context)
+success, err = imgui.init(_G.sdl_window, gl_context)
 if not success then
     print("ImGui init failed: " .. err)
     gl.destroy()
@@ -39,7 +50,7 @@ end
 local running = true
 while running do
     -- Poll SDL events
-    local events = sdl.poll_events_ig() -- Use poll_events_ig to process ImGui inputs
+    local events = sdl.poll_events_ig()
     for i, event in ipairs(events) do
         if event.type == sdl.constants.SDL_EVENT_QUIT then
             running = false

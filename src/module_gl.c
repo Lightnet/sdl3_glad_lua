@@ -4,6 +4,9 @@
 #include <lauxlib.h>
 #include <stdio.h>
 
+// Static variable to store the OpenGL context
+static SDL_GLContext g_gl_context = NULL;
+
 // Forward: Get window from Lua global
 static SDL_Window *get_sdl_window(lua_State *L) {
     lua_getglobal(L, "sdl_window");
@@ -12,20 +15,20 @@ static SDL_Window *get_sdl_window(lua_State *L) {
     return window;
 }
 
-// Get GL context from module table (global fetch)
-static SDL_GLContext get_gl_gl_context(lua_State *L) {
-    lua_getglobal(L, "gl");  // Get the gl module table
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);
-        return NULL;
+// Updated function: Lua: gl.get_gl_context() -> lightuserdata (SDL_GLContext)
+static int gl_get_gl_context(lua_State *L) {
+    printf("is this local get gl_get_gl_context???\n");
+    if (!g_gl_context) {
+        lua_pushnil(L);
+        lua_pushstring(L, "OpenGL context not initialized");
+        return 2;
     }
-    lua_getfield(L, -1, "gl_context");
-    SDL_GLContext context = (SDL_GLContext)lua_topointer(L, -1);
-    lua_pop(L, 2);  // Pop context and gl table
-    return context;
+    lua_pushlightuserdata(L, g_gl_context);
+    return 1;
 }
 
 // Lua: module_gl.init() -> bool, err_msg (creates context, loads GLAD, stores as gl.gl_context)
+// Existing gl_init function (modified to show context storage)
 static int gl_init(lua_State *L) {
     printf("get window\n");
     SDL_Window *window = get_sdl_window(L);
@@ -35,7 +38,6 @@ static int gl_init(lua_State *L) {
         return 2;
     }
     printf("get flags\n");
-    // Verify window flags
     Uint32 flags = SDL_GetWindowFlags(window);
     if (!(flags & SDL_WINDOW_OPENGL)) {
         lua_pushboolean(L, 0);
@@ -62,7 +64,6 @@ static int gl_init(lua_State *L) {
         return 2;
     }
 
-    // Load GLAD 2.0 with SDL's proc loader
     printf("gladLoadGL\n");
     if (!gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress)) {
         lua_pushboolean(L, 0);
@@ -72,21 +73,21 @@ static int gl_init(lua_State *L) {
     }
 
     printf("SDL_GL_SetSwapInterval\n");
-    // Set swap interval (VSync)
     if (SDL_GL_SetSwapInterval(1) < 0) {
         printf("Warning: Failed to set VSync: %s\n", SDL_GetError());
     }
 
-    // Verify GL version
     printf("OpenGL loaded: %s %s\n", glGetString(GL_VERSION), glGetString(GL_RENDERER));
-    // printf("GLAD GL version: %d.%d\n", GLAD_VERSION_MAJOR, GLAD_VERSION_MINOR);
 
-    printf("lua_getglobal gl\n");
-    // Store context in gl module table
+    // Store context in static variable
+    g_gl_context = context;
+
+    // Optionally store in gl module table for backward compatibility
     lua_getglobal(L, "gl");
     if (!lua_istable(L, -1)) {
         lua_pop(L, 1);
         SDL_GL_DestroyContext(context);
+        g_gl_context = NULL;
         lua_pushboolean(L, 0);
         lua_pushstring(L, "gl module not loaded");
         return 2;
@@ -132,22 +133,22 @@ static int gl_swap_buffers(lua_State *L) {
     return 0;
 }
 
-// module_gl.destroy() -> void (cleanup context, clear gl.gl_context)
+// Existing gl_destroy function (unchanged)
 static int gl_destroy(lua_State *L) {
-    SDL_GLContext context = get_gl_gl_context(L);
-    if (context) {
-        SDL_GL_DestroyContext(context);
-        // Clear from module table
-        lua_getglobal(L, "gl");
-        if (lua_istable(L, -1)) {
-            lua_pushnil(L);
-            lua_setfield(L, -2, "gl_context");
-        }
+    if (g_gl_context) {
+        SDL_GL_DestroyContext(g_gl_context);
+        g_gl_context = NULL;
+    }
+    // Clear gl_context in module table for consistency
+    lua_getglobal(L, "gl");
+    if (lua_istable(L, -1)) {
+        lua_pushnil(L);
+        lua_setfield(L, -2, "gl_context");
         lua_pop(L, 1);
-        printf("GL context destroyed\n");
     }
     return 0;
 }
+
 
 // Shader functions
 static int gl_create_shader(lua_State *L) {
@@ -281,6 +282,7 @@ static int gl_draw_arrays(lua_State *L) {
 static const struct luaL_Reg gl_lib[] = {
     {"init", gl_init},
     {"destroy", gl_destroy},
+    {"get_gl_context", gl_get_gl_context},
     {"clear", gl_clear},
     {"clear_color", gl_clear_color},
     {"viewport", gl_viewport},
