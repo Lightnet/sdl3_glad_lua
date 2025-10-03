@@ -52,7 +52,7 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
 ```lua
 -- Load required modules
 local sdl = require("module_sdl")
-gl = require("module_gl") -- can't use local due config in module_gl.c need rework later.
+local gl = require("module_gl") 
 local imgui = require("module_imgui")
 
 -- Initialize SDL with video and events subsystems
@@ -78,8 +78,15 @@ if not success then
     return
 end
 
+-- Access stored gl context
+local gl_context = gl.get_gl_context()
+if not gl_context then
+    print("Failed to get GL context: ", select(2, gl.get_gl_context()))
+    return
+end
+
 -- Initialize ImGui with sdl_window and gl_context
-success, err = imgui.init(_G.sdl_window, gl.gl_context)
+success, err = imgui.init(_G.sdl_window, gl_context)
 if not success then
     print("ImGui init failed: " .. err)
     gl.destroy()
@@ -101,7 +108,8 @@ while running do
     end
 
     -- Start ImGui frame
-    imgui.new_frame()
+    imgui.new_frame() -- start drawing imgui
+    -- create widgets here
 
     -- Create a simple ImGui window
     local open = imgui.ig_begin("Test Window", true)
@@ -112,14 +120,14 @@ while running do
         end
         imgui.ig_end()
     end
+    imgui.render() -- end drawing imgui
 
     -- Clear the screen
     gl.clear_color(0.2, 0.3, 0.3, 1.0)
     gl.clear()
 
     -- Render ImGui
-    imgui.render()
-    imgui.render_draw_data()
+    imgui.render_draw_data() -- draw gl imgui 
 
     -- Swap buffers
     gl.swap_buffers()
@@ -134,6 +142,11 @@ sdl.quit()
 
 # Bugs:
 - Note that SDL 3.2.22 basic set up for SDL_GL_DOUBLEBUFFER, SDL_GL_DEPTH_SIZE and other but not for SDL_GL_CONTEXT_MAJOR_VERSION and SDL_GL_CONTEXT_MINOR_VERSION. Unless I config it wrong but check on SDL 2.x which is working on simple test.
+
+# Lua Global Variable:
+```lua
+local gl = require("module_gl") -- Global to ensure _G.gl is set for gl_init
+```
 
 # Credits:
 - Grok AI on x.

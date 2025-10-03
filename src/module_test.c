@@ -150,7 +150,7 @@ static const struct luaL_Reg module_test[] = {
     {"get_int", l_get_int},
     {"set_bool", l_set_bool},
     {"get_bool", l_get_bool},
-    {"call_foo", l_call_foo}, // Added new function
+    {"call_foo", l_call_foo},
     {NULL, NULL} // Sentinel
 };
 

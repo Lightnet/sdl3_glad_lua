@@ -15,9 +15,18 @@ static SDL_Window *get_sdl_window(lua_State *L) {
     return window;
 }
 
+// Check if OpenGL context is valid
+static int check_gl_context(lua_State *L) {
+    if (!g_gl_context) {
+        lua_pushnil(L);
+        lua_pushstring(L, "OpenGL context not initialized");
+        return 2;
+    }
+    return 0;
+}
+
 // Updated function: Lua: gl.get_gl_context() -> lightuserdata (SDL_GLContext)
 static int gl_get_gl_context(lua_State *L) {
-    printf("is this local get gl_get_gl_context???\n");
     if (!g_gl_context) {
         lua_pushnil(L);
         lua_pushstring(L, "OpenGL context not initialized");
@@ -28,16 +37,13 @@ static int gl_get_gl_context(lua_State *L) {
 }
 
 // Lua: module_gl.init() -> bool, err_msg (creates context, loads GLAD, stores as gl.gl_context)
-// Existing gl_init function (modified to show context storage)
 static int gl_init(lua_State *L) {
-    // printf("get window\n");
     SDL_Window *window = get_sdl_window(L);
     if (!window) {
         lua_pushboolean(L, 0);
         lua_pushstring(L, "No window found");
         return 2;
     }
-    // printf("get flags\n");
     Uint32 flags = SDL_GetWindowFlags(window);
     if (!(flags & SDL_WINDOW_OPENGL)) {
         lua_pushboolean(L, 0);
@@ -64,7 +70,6 @@ static int gl_init(lua_State *L) {
         return 2;
     }
 
-    // printf("gladLoadGL\n");
     if (!gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress)) {
         lua_pushboolean(L, 0);
         lua_pushstring(L, "Failed to load OpenGL functions");
@@ -72,7 +77,6 @@ static int gl_init(lua_State *L) {
         return 2;
     }
 
-    // printf("SDL_GL_SetSwapInterval\n");
     if (SDL_GL_SetSwapInterval(1) < 0) {
         printf("Warning: Failed to set VSync: %s\n", SDL_GetError());
     }
@@ -82,23 +86,9 @@ static int gl_init(lua_State *L) {
     // Store context in static variable
     g_gl_context = context;
 
-    // Optionally store in gl module table for backward compatibility
-    lua_getglobal(L, "gl");
-    if (!lua_istable(L, -1)) {
-        lua_pop(L, 1);
-        SDL_GL_DestroyContext(context);
-        g_gl_context = NULL;
-        lua_pushboolean(L, 0);
-        lua_pushstring(L, "gl module not loaded");
-        return 2;
-    }
     lua_pushlightuserdata(L, context);
-    lua_setfield(L, -2, "gl_context");
-    lua_pop(L, 1);
-
     lua_pushboolean(L, 1);
-    // printf("end gl set up.\n");
-    return 1;
+    return 2; // Return both context and success flag
 }
 
 // GL bindings
@@ -133,18 +123,11 @@ static int gl_swap_buffers(lua_State *L) {
     return 0;
 }
 
-// Existing gl_destroy function (unchanged)
+// Existing gl_destroy function
 static int gl_destroy(lua_State *L) {
     if (g_gl_context) {
         SDL_GL_DestroyContext(g_gl_context);
         g_gl_context = NULL;
-    }
-    // Clear gl_context in module table for consistency
-    lua_getglobal(L, "gl");
-    if (lua_istable(L, -1)) {
-        lua_pushnil(L);
-        lua_setfield(L, -2, "gl_context");
-        lua_pop(L, 1);
     }
     return 0;
 }
@@ -278,6 +261,22 @@ static int gl_draw_arrays(lua_State *L) {
     return 0;
 }
 
+static int gl_delete_shader(lua_State *L) {
+    int ret = check_gl_context(L);
+    if (ret) return ret;
+    GLuint shader = (GLuint)luaL_checkinteger(L, 1);
+    glDeleteShader(shader);
+    return 0;
+}
+
+static int gl_delete_program(lua_State *L) {
+    int ret = check_gl_context(L);
+    if (ret) return ret;
+    GLuint program = (GLuint)luaL_checkinteger(L, 1);
+    glDeleteProgram(program);
+    return 0;
+}
+
 static const struct luaL_Reg gl_lib[] = {
     {"init", gl_init},
     {"destroy", gl_destroy},
@@ -287,9 +286,11 @@ static const struct luaL_Reg gl_lib[] = {
     {"viewport", gl_viewport},
     {"swap_buffers", gl_swap_buffers},
     {"create_shader", gl_create_shader},
+    {"delete_shader", gl_delete_shader},
     {"shader_source", gl_shader_source},
     {"compile_shader", gl_compile_shader},
     {"create_program", gl_create_program},
+    {"delete_program", gl_delete_program},
     {"attach_shader", gl_attach_shader},
     {"link_program", gl_link_program},
     {"use_program", gl_use_program},
@@ -310,7 +311,6 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushnil(L);
     lua_setfield(L, -2, "gl_context");
     // Add constants
-    // lua_newtable(L);
     lua_pushinteger(L, GL_VERTEX_SHADER); lua_setfield(L, -2, "VERTEX_SHADER");
     lua_pushinteger(L, GL_FRAGMENT_SHADER); lua_setfield(L, -2, "FRAGMENT_SHADER");
     lua_pushinteger(L, GL_ARRAY_BUFFER); lua_setfield(L, -2, "ARRAY_BUFFER");
@@ -319,6 +319,6 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_TRIANGLES); lua_setfield(L, -2, "TRIANGLES");
     lua_pushinteger(L, GL_COLOR_BUFFER_BIT); lua_setfield(L, -2, "COLOR_BUFFER_BIT");
     lua_pushinteger(L, GL_DEPTH_BUFFER_BIT); lua_setfield(L, -2, "DEPTH_BUFFER_BIT");
-    // lua_setfield(L, -2, "constants");
+    
     return 1;
 }

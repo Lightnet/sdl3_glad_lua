@@ -32,19 +32,22 @@ if not success then
     return
 end
 
--- Demo: Access stored context
--- if gl.gl_context then
---     util.log("GL context stored: " .. tostring(gl.gl_context))
--- else
---     util.log("GL context not stored (error)")
--- end
+-- Demo: Access stored gl context
+local gl_context = gl.get_gl_context()
+if not gl_context then
+    print("Failed to get GL context: ", select(2, gl.get_gl_context()))
+    return
+end
 
--- Initialize ImGui
--- local success, err = imgui.init(window, gl.gl_context)
--- if not success then
---     print("Failed to initialize ImGui: " .. err)
---     return
--- end
+-- Initialize ImGui with sdl_window and gl_context
+success, err = imgui.init(_G.sdl_window, gl_context)
+if not success then
+    print("ImGui init failed: " .. err)
+    gl.destroy()
+    sdl.quit()
+    return
+end
+
 
 -- Vertex Shader
 local vertexShaderSource = [[
@@ -130,7 +133,8 @@ gl.viewport(0, 0, 800, 600)
 local running = true
 while running do
     -- Handle events
-    local events = sdl.poll_events()
+    -- local events = sdl.poll_events()
+    local events = sdl.poll_events_ig() -- Use poll_events_ig to process ImGui inputs
     for i, event in ipairs(events) do
         if event.type == sdl.SDL_EVENT_QUIT then
             running = false
@@ -140,6 +144,22 @@ while running do
         end
     end
 
+    -- Start ImGui frame
+    imgui.new_frame() -- start drawing imgui
+    -- create widgets here
+
+    -- Create a simple ImGui window
+    local open = imgui.ig_begin("Test Window", true)
+    if open then
+        imgui.ig_text("Hello, ImGui from Lua!")
+        if imgui.ig_button("Click Me") then
+            print("Button clicked!")
+        end
+        imgui.ig_end()
+    end
+
+    imgui.render() -- end drawing imgui
+
     -- Render
     gl.clear_color(0.2, 0.3, 0.3, 1.0)
     gl.clear()
@@ -148,10 +168,13 @@ while running do
     gl.bind_vertex_array(vao)
     gl.draw_arrays(gl.TRIANGLES, 0, 3)
 
+    imgui.render_draw_data() -- draw gl imgui 
+
     gl.swap_buffers()
 end
 
 -- Cleanup
+imgui.shutdown()
 gl.delete_shader(vertexShader)
 gl.delete_shader(fragmentShader)
 gl.delete_program(shaderProgram)

@@ -26,8 +26,14 @@ if not success then
     return
 end
 
+local gl_context = gl.get_gl_context()
+if not gl_context then
+    print("Failed to get GL context: ", select(2, gl.get_gl_context()))
+    return
+end
+
 -- Initialize ImGui with sdl_window and gl_context
-success, err = imgui.init(_G.sdl_window, gl.gl_context)
+success, err = imgui.init(_G.sdl_window, gl_context)
 if not success then
     print("ImGui init failed: " .. err)
     gl.destroy()

@@ -1,12 +1,6 @@
--- main.lua
-
 local sdl = require("module_sdl")
-local gl = require("module_gl") -- Global to ensure _G.gl is set for gl_init
-local imgui = require("module_imgui")
+local gl = require("module_gl")
 local lua_util = require("lua_util")
-
-print("gl type:", type(gl))
-print("gl.delete_shader:", type(gl.delete_shader))
 
 -- Initialize SDL video subsystem
 local success, err = sdl.init(sdl.SDL_INIT_VIDEO)
@@ -32,20 +26,6 @@ if not success then
     return
 end
 
--- Demo: Access stored context
--- if gl.gl_context then
---     util.log("GL context stored: " .. tostring(gl.gl_context))
--- else
---     util.log("GL context not stored (error)")
--- end
-
--- Initialize ImGui
--- local success, err = imgui.init(window, gl.gl_context)
--- if not success then
---     print("Failed to initialize ImGui: " .. err)
---     return
--- end
-
 -- Vertex Shader
 local vertexShaderSource = [[
 #version 330 core
@@ -55,12 +35,12 @@ void main() {
 }
 ]]
 
--- Fragment Shader (fixed comment)
+-- Fragment Shader
 local fragmentShaderSource = [[
 #version 330 core
 out vec4 FragColor;
 void main() {
-    FragColor = vec4(1.0, 0.5, 0.2, 1.0); // Orange color
+    FragColor = vec4(1.0, 0.5, 0.2, 1.0); //-- Orange color
 }
 ]]
 
@@ -135,8 +115,7 @@ while running do
         if event.type == sdl.SDL_EVENT_QUIT then
             running = false
         elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
-            print("resize window")
-            gl.viewport(0, 0, event.width, event.height)
+            -- gl.viewport(0, 0, event.width, event.height)
         end
     end
 
