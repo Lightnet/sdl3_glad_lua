@@ -30,14 +30,14 @@ static int gl_get_gl_context(lua_State *L) {
 // Lua: module_gl.init() -> bool, err_msg (creates context, loads GLAD, stores as gl.gl_context)
 // Existing gl_init function (modified to show context storage)
 static int gl_init(lua_State *L) {
-    printf("get window\n");
+    // printf("get window\n");
     SDL_Window *window = get_sdl_window(L);
     if (!window) {
         lua_pushboolean(L, 0);
         lua_pushstring(L, "No window found");
         return 2;
     }
-    printf("get flags\n");
+    // printf("get flags\n");
     Uint32 flags = SDL_GetWindowFlags(window);
     if (!(flags & SDL_WINDOW_OPENGL)) {
         lua_pushboolean(L, 0);
@@ -64,7 +64,7 @@ static int gl_init(lua_State *L) {
         return 2;
     }
 
-    printf("gladLoadGL\n");
+    // printf("gladLoadGL\n");
     if (!gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress)) {
         lua_pushboolean(L, 0);
         lua_pushstring(L, "Failed to load OpenGL functions");
@@ -72,7 +72,7 @@ static int gl_init(lua_State *L) {
         return 2;
     }
 
-    printf("SDL_GL_SetSwapInterval\n");
+    // printf("SDL_GL_SetSwapInterval\n");
     if (SDL_GL_SetSwapInterval(1) < 0) {
         printf("Warning: Failed to set VSync: %s\n", SDL_GetError());
     }
@@ -97,7 +97,7 @@ static int gl_init(lua_State *L) {
     lua_pop(L, 1);
 
     lua_pushboolean(L, 1);
-    printf("end gl set up.\n");
+    // printf("end gl set up.\n");
     return 1;
 }
 
