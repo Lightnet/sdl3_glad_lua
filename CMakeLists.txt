@@ -143,6 +143,15 @@ FetchContent_Declare(
 set(ENET_TEST  OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(enet)
 
+
+FetchContent_Declare(
+    cglm
+    GIT_REPOSITORY https://github.com/recp/cglm.git
+    GIT_TAG v0.9.6
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(cglm)
+
 #================================================
 # APP
 #================================================
@@ -158,6 +167,7 @@ set(SRC_FILES
     src/module_gl.c
     src/module_imgui.c
     src/module_enet.c
+    src/module_cglm.c
     src/module_test.c
     glad/src/gl.c
 )
@@ -178,9 +188,16 @@ add_executable(${APP_NAME}
 )
 
 # SDL3 
-target_link_libraries(${APP_NAME} PUBLIC SDL3::SDL3) # SDL 3.2.22
-target_link_libraries(${APP_NAME} PRIVATE custom_cimgui) # custom cimgui for sdl3 and opengl3, 1.92.1 or master
-target_link_libraries(${APP_NAME} PRIVATE lua) # lua 5.4.7
+target_link_libraries(${APP_NAME} PUBLIC 
+    SDL3::SDL3                              # SDL 3.2.22
+    custom_cimgui                           # imgui
+    lua                                     # lua 5.4.7
+    cglm                                    # cglm
+) 
+
+# target_link_libraries(${APP_NAME} PRIVATE custom_cimgui) # custom cimgui for sdl3 and opengl3, 1.92.1 or master
+# target_link_libraries(${APP_NAME} PRIVATE lua) # lua 5.4.7
+# target_link_libraries(${APP_NAME} PRIVATE cglm) # cglm
 # CMAKE_SOURCE_DIR > current folder
 # CMAKE_CURRENT_SOURCE_DIR  > top folder
 # Include directories
@@ -193,6 +210,7 @@ target_include_directories(${APP_NAME} PUBLIC
     ${SDL3_SOURCE_DIR}/include                  # SDL 3.2.22
     ${lua_SOURCE_DIR}/include                   # lua
     ${enet_SOURCE_DIR}/include                  # enet
+    ${cglm_SOURCE_DIR}/include                  # cglm
 )
 
 # for c #define
