@@ -13,6 +13,7 @@
 - cimgui 1.92
 - Glad 2.0.8
 - zpl-c/enet v2.6.5
+- cglm v0.9.6
 
 # Status:
 - prototype.
@@ -39,6 +40,7 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
 - [x] lua 5.4
 - [x] shaders
 - [x] triangle 2D
+- [x] cglm 0.9.6
 - [ ] network
 - [ ] ...
 
