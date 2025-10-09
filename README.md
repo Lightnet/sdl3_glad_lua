@@ -33,11 +33,30 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
 - Simplicity First: Prioritize readable, concise Lua APIs that feel like "C in Lua" – e.g., direct calls to gl.BindTexture() equivalents – while keeping the host binary under 5MB.
 - Runtime Iteration: Scripts load/execute on-the-fly; hot-reload scenes during playtesting for game dev workflows.
 
+
+# There are good and bad:
+  There are pros and cons to lua script.
+
+## Pros:
+- easy to test in real time without need to recompile which take time.
+- learn some basic of the lua script and meta table archtech format.
+- work in progress...
+
+## Cons:
+- Does not design for large scale due c and lua layer translate.
+- There will be lag between layers for script to c.
+- not able to learn c programing language which required to code correctly. Still this open src you see how code works.
+- some functions are not match still need work on it. It just prototype.
+- need to work on doc.
+
 # Lua Features:
-- [x] imgui simple
+- [x] cimgui simple
 - [x] opengl glad 2.0
 - [x] sdl 3.2
+    - bugs doublebuffer not working to set and get zero.
 - [x] lua 5.4
+- [x] gl load image 2d
+- [ ] gl load font 2d
 - [x] shaders
 - [x] triangle 2D
 - [x] cglm 0.9.6
