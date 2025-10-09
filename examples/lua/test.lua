@@ -34,6 +34,10 @@ print("Boolean set to false, got: " .. tostring(test.get_bool()))
 print("\nTesting call_foo:")
 test.call_foo()
 
+
+test.set_window({width=100,height=200})
+test.set_window({width=100})
+
 -- Test error case
 print("\nTesting error case:")
 test.init() -- Reset to clear state
@@ -42,3 +46,4 @@ local status, err = pcall(test.get_number)
 if not status then
     print("Error caught: " .. err)
 end
+

@@ -395,12 +395,27 @@ static const luaL_Reg mat4_methods[] = {
     {NULL, NULL}
 };
 
+// Lua: cglm.ortho(left, right, bottom, top, near, far) -> mat4
+static int mat4_ortho(lua_State *L) {
+    float left = (float)luaL_checknumber(L, 1);
+    float right = (float)luaL_checknumber(L, 2);
+    float bottom = (float)luaL_checknumber(L, 3);
+    float top = (float)luaL_checknumber(L, 4);
+    float near = (float)luaL_checknumber(L, 5);
+    float far = (float)luaL_checknumber(L, 6);
+    mat4 m;
+    glm_ortho(left, right, bottom, top, near, far, m);
+    push_mat4(L, m);
+    return 1;
+}
+
 // Module functions
 static const luaL_Reg module_glm_funcs[] = {
     {"vec3", vec3_new},
     {"vec4", vec4_new},
     {"mat4", mat4_new},
     {"mat4_identity", mat4_identity},
+    {"ortho", mat4_ortho},
     {NULL, NULL}
 };
 

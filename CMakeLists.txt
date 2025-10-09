@@ -143,7 +143,6 @@ FetchContent_Declare(
 set(ENET_TEST  OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(enet)
 
-
 FetchContent_Declare(
     cglm
     GIT_REPOSITORY https://github.com/recp/cglm.git
@@ -151,6 +150,15 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(cglm)
+
+
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG master
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(stb)
 
 #================================================
 # APP
@@ -165,9 +173,11 @@ set(SRC_FILES
     src/module_sdl.c
     src/module_lua.c
     src/module_gl.c
-    src/module_imgui.c
+    src/module_cimgui.c
     src/module_enet.c
     src/module_cglm.c
+    src/module_cglm.c
+    src/module_stb.c
     src/module_test.c
     glad/src/gl.c
 )
@@ -181,7 +191,7 @@ add_executable(${APP_NAME}
     src/main.c
     # examples/sdl3_gl_check.c
     # src/check_sdl_buffer.c
-    # src/check_sdl_buffer03.c
+    # examples/check_sdl_buffer03.c
     # src/triangle.c
     # src/server.c
     # src/sdl3_cimgui.c
@@ -211,6 +221,7 @@ target_include_directories(${APP_NAME} PUBLIC
     ${lua_SOURCE_DIR}/include                   # lua
     ${enet_SOURCE_DIR}/include                  # enet
     ${cglm_SOURCE_DIR}/include                  # cglm
+    ${stb_SOURCE_DIR}                           # stb
 )
 
 # for c #define

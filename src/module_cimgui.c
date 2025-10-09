@@ -1,6 +1,6 @@
 #define igGetIO igGetIO_Nil  // CImGui workaround
 
-#include "module_imgui.h"
+#include "module_cimgui.h"
 #include "module_gl.h"  // For get_gl_gl_context (if needed)
 #include <SDL3/SDL.h>
 #include <glad/gl.h>

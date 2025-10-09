@@ -2,9 +2,11 @@
 #include "module_sdl.h"
 #include "module_lua.h"
 #include "module_gl.h"
-#include "module_imgui.h"
+#include "module_cimgui.h"
 #include "module_enet.h"
 #include "module_cglm.h"
+#include "module_stb.h"
+
 #include "module_test.h"
 #include <SDL3/SDL.h>
 #include <lua.h>
@@ -53,6 +55,9 @@ int main(int argc, char **argv) {
 
     lua_pushcfunction(L, luaopen_module_cglm);
     lua_setfield(L, -2, "module_cglm");
+
+    lua_pushcfunction(L, luaopen_module_stb);
+    lua_setfield(L, -2, "module_stb");
 
     lua_pushcfunction(L, luaopen_module_test);
     lua_setfield(L, -2, "module_test");

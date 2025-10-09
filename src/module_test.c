@@ -139,6 +139,32 @@ static int l_call_foo(lua_State *L) {
     return 1;
 }
 
+// C implementation of test.set_window(table)
+static int set_window_impl(lua_State *L) {
+    // Check if arg 1 is a table
+    if (!lua_istable(L, 1)) {
+        return luaL_error(L, "set_window: expected table as argument");
+    }
+
+    // Get width (default 0 if missing)
+    lua_getfield(L, 1, "width");
+    lua_Integer width = lua_tointegerx(L, -1, NULL);
+    lua_pop(L, 1);
+
+    // Get height (default 0 if missing)
+    lua_getfield(L, 1, "height");
+    lua_Integer height = lua_tointegerx(L, -1, NULL);
+    lua_pop(L, 1);
+
+    // Simulate setting a window (e.g., print or store globally)
+    printf("Setting window: width=%ld, height=%ld\n", width, height);
+
+    // Push success boolean
+    lua_pushboolean(L, 1);
+    return 1;  // One return value
+}
+
+
 // Module function table
 static const struct luaL_Reg module_test[] = {
     {"init", l_init},
@@ -151,6 +177,8 @@ static const struct luaL_Reg module_test[] = {
     {"set_bool", l_set_bool},
     {"get_bool", l_get_bool},
     {"call_foo", l_call_foo},
+    {"set_window", set_window_impl},
+
     {NULL, NULL} // Sentinel
 };
 

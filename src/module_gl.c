@@ -3,6 +3,7 @@
 #include <glad/gl.h>  // GLAD 2.0
 #include <lauxlib.h>
 #include <stdio.h>
+#include <cglm/cglm.h>
 
 // Static variable to store the OpenGL context
 static SDL_GLContext g_gl_context = NULL;
@@ -277,6 +278,159 @@ static int gl_delete_program(lua_State *L) {
     return 0;
 }
 
+
+// Lua: gl.gen_textures() -> texture_id
+static int gl_gen_textures(lua_State *L) {
+    GLuint texture;
+    glGenTextures(1, &texture);
+    lua_pushinteger(L, texture);
+    return 1;
+}
+
+// Lua: gl.bind_texture(target, texture_id)
+static int gl_bind_texture(lua_State *L) {
+    GLenum target = (GLenum)luaL_checkinteger(L, 1);
+    GLuint texture = (GLuint)luaL_checkinteger(L, 2);
+    glBindTexture(target, texture);
+    return 0;
+}
+
+// Lua: gl.tex_image_2d(target, level, internal_format, width, height, border, format, type, data)
+static int gl_tex_image_2d(lua_State *L) {
+    GLenum target = (GLenum)luaL_checkinteger(L, 1);
+    GLint level = (GLint)luaL_checkinteger(L, 2);
+    GLint internal_format = (GLint)luaL_checkinteger(L, 3);
+    GLsizei width = (GLsizei)luaL_checkinteger(L, 4);
+    GLsizei height = (GLsizei)luaL_checkinteger(L, 5);
+    GLint border = (GLint)luaL_checkinteger(L, 6);
+    GLenum format = (GLenum)luaL_checkinteger(L, 7);
+    GLenum type = (GLenum)luaL_checkinteger(L, 8);
+    void *data = lua_touserdata(L, 9);
+    glTexImage2D(target, level, internal_format, width, height, border, format, type, data);
+    return 0;
+}
+
+// Lua: gl.tex_parameter_i(target, pname, param)
+static int gl_tex_parameter_i(lua_State *L) {
+    GLenum target = (GLenum)luaL_checkinteger(L, 1);
+    GLenum pname = (GLenum)luaL_checkinteger(L, 2);
+    GLint param = (GLint)luaL_checkinteger(L, 3);
+    glTexParameteri(target, pname, param);
+    return 0;
+}
+
+// Lua: gl.draw_elements(mode, count, type, offset)
+static int gl_draw_elements(lua_State *L) {
+    GLenum mode = (GLenum)luaL_checkinteger(L, 1);
+    GLsizei count = (GLsizei)luaL_checkinteger(L, 2);
+    GLenum type = (GLenum)luaL_checkinteger(L, 3);
+    GLintptr offset = (GLintptr)luaL_checkinteger(L, 4);
+    glDrawElements(mode, count, type, (const void *)offset);
+    return 0;
+}
+
+// Helper to check cglm mat4 userdata
+static mat4* check_mat4(lua_State *L, int idx) {
+    void *ud = luaL_checkudata(L, idx, "cglm.mat4");
+    luaL_argcheck(L, ud != NULL, idx, "cglm.mat4 expected");
+    return (mat4*)ud;
+}
+
+
+// Lua: gl.uniform_matrix4fv(location, count, transpose, matrix)
+static int gl_uniform_matrix4fv(lua_State *L) {
+    GLint location = (GLint)luaL_checkinteger(L, 1);
+    GLsizei count = (GLsizei)luaL_checkinteger(L, 2);
+    GLboolean transpose = (GLboolean)lua_toboolean(L, 3);
+    
+    // Check if the 4th argument is a cglm mat4 userdata
+    if (luaL_testudata(L, 4, "cglm.mat4")) {
+        mat4 *matrix = check_mat4(L, 4);
+        glUniformMatrix4fv(location, count, transpose, (const GLfloat *)(*matrix));
+        printf("Using cglm.mat4: [0][0]=%f, [1][1]=%f, [3][0]=%f, [3][1]=%f\n",
+               (*matrix)[0][0], (*matrix)[1][1], (*matrix)[3][0], (*matrix)[3][1]);
+    } else {
+        // Fallback to string-based version with logging
+        const char *matrix = luaL_checkstring(L, 4);
+        size_t len = lua_rawlen(L, 4);
+        printf("String-based matrix: length=%zu bytes\n", len);
+        if (len != 64) {
+            printf("Warning: Expected 64 bytes (16 floats), got %zu\n", len);
+        } else {
+            const GLfloat *float_matrix = (const GLfloat *)matrix;
+            printf("Matrix values: [0]=%f, [1]=%f, [5]=%f, [12]=%f, [13]=%f, [15]=%f\n",
+                   float_matrix[0], float_matrix[1], float_matrix[5],
+                   float_matrix[12], float_matrix[13], float_matrix[15]);
+        }
+        glUniformMatrix4fv(location, count, transpose, (const GLfloat *)matrix);
+    }
+    return 0;
+}
+
+// Lua: gl.get_uniform_location(program, name) -> location
+static int gl_get_uniform_location(lua_State *L) {
+    GLuint program = (GLuint)luaL_checkinteger(L, 1);
+    const char *name = luaL_checkstring(L, 2);
+    GLint location = glGetUniformLocation(program, name);
+    lua_pushinteger(L, location);
+    return 1;
+}
+
+// Lua: gl.uniform1i(location, value)
+static int gl_uniform1i(lua_State *L) {
+    GLint location = (GLint)luaL_checkinteger(L, 1);
+    GLint value = (GLint)luaL_checkinteger(L, 2);
+    glUniform1i(location, value);
+    return 0;
+}
+
+// Lua: gl.active_texture(texture_unit)
+static int gl_active_texture(lua_State *L) {
+    GLenum texture_unit = (GLenum)luaL_checkinteger(L, 1);
+    glActiveTexture(texture_unit);
+    return 0;
+}
+
+static int gl_enable(lua_State *L) {
+    GLenum cap = (GLenum)luaL_checkinteger(L, 1);
+    glEnable(cap);
+    return 0;
+}
+
+static int gl_get_error(lua_State *L) {
+    GLenum err = glGetError();
+    lua_pushinteger(L, err);
+    return 1;
+}
+
+static int gl_blend_func(lua_State *L) {
+    GLenum sfactor = (GLenum)luaL_checkinteger(L, 1);
+    GLenum dfactor = (GLenum)luaL_checkinteger(L, 2);
+    glBlendFunc(sfactor, dfactor);
+    return 0;
+}
+
+// Lua: gl.dummy_uniform_matrix4fv(location, count, transpose) (kept for reference)
+// working test.
+static int gl_dummy_uniform_matrix4fv(lua_State *L) {
+    GLint location = (GLint)luaL_checkinteger(L, 1);
+    GLsizei count = (GLsizei)luaL_checkinteger(L, 2);
+    GLboolean transpose = (GLboolean)lua_toboolean(L, 3);
+    
+    // Hardcoded orthographic projection matrix for 800x600
+    GLfloat matrix[] = {
+        0.0025f, 0.0f, 0.0f, 0.0f,
+        0.0f, 0.003333f, 0.0f, 0.0f,
+        0.0f, 0.0f, -1.0f, 0.0f,
+        -1.0f, -1.0f, 0.0f, 1.0f
+    };
+    
+    glUniformMatrix4fv(location, count, transpose, matrix);
+    return 0;
+}
+
+
+
 static const struct luaL_Reg gl_lib[] = {
     {"init", gl_init},
     {"destroy", gl_destroy},
@@ -302,6 +456,23 @@ static const struct luaL_Reg gl_lib[] = {
     {"vertex_attrib_pointer", gl_vertex_attrib_pointer},
     {"enable_vertex_attrib_array", gl_enable_vertex_attrib_array},
     {"draw_arrays", gl_draw_arrays},
+
+    {"gen_textures", gl_gen_textures},
+    {"bind_texture", gl_bind_texture},
+    {"tex_image_2d", gl_tex_image_2d},
+    {"tex_parameter_i", gl_tex_parameter_i},
+    {"draw_elements", gl_draw_elements},
+
+    {"uniform_matrix4fv", gl_uniform_matrix4fv},
+    {"get_uniform_location", gl_get_uniform_location},
+
+    {"active_texture", gl_active_texture},
+    {"uniform1i", gl_uniform1i},
+    {"enable", gl_enable},
+    {"get_error", gl_get_error},
+    {"blend_func", gl_blend_func},
+    {"dummy_uniform_matrix4fv", gl_dummy_uniform_matrix4fv}, // Add new function
+
     {NULL, NULL}
 };
 
@@ -319,6 +490,25 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_TRIANGLES); lua_setfield(L, -2, "TRIANGLES");
     lua_pushinteger(L, GL_COLOR_BUFFER_BIT); lua_setfield(L, -2, "COLOR_BUFFER_BIT");
     lua_pushinteger(L, GL_DEPTH_BUFFER_BIT); lua_setfield(L, -2, "DEPTH_BUFFER_BIT");
+
+    lua_pushinteger(L, GL_ELEMENT_ARRAY_BUFFER); lua_setfield(L, -2, "ELEMENT_ARRAY_BUFFER");
+    lua_pushinteger(L, GL_UNSIGNED_INT); lua_setfield(L, -2, "UNSIGNED_INT");
+
+    lua_pushinteger(L, GL_TEXTURE_2D); lua_setfield(L, -2, "TEXTURE_2D");
+    lua_pushinteger(L, GL_TEXTURE_MIN_FILTER); lua_setfield(L, -2, "TEXTURE_MIN_FILTER");
+    lua_pushinteger(L, GL_TEXTURE_MAG_FILTER); lua_setfield(L, -2, "TEXTURE_MAG_FILTER");
+    lua_pushinteger(L, GL_NEAREST); lua_setfield(L, -2, "NEAREST");
+    lua_pushinteger(L, GL_LINEAR); lua_setfield(L, -2, "LINEAR");
+    lua_pushinteger(L, GL_RGB); lua_setfield(L, -2, "RGB");
+    lua_pushinteger(L, GL_RGBA); lua_setfield(L, -2, "RGBA");
+    lua_pushinteger(L, GL_UNSIGNED_BYTE); lua_setfield(L, -2, "UNSIGNED_BYTE");
+
+    lua_pushinteger(L, GL_TEXTURE0); lua_setfield(L, -2, "TEXTURE0");
+
+    lua_pushinteger(L, GL_BLEND); lua_setfield(L, -2, "BLEND");
+    lua_pushinteger(L, GL_SRC_ALPHA); lua_setfield(L, -2, "SRC_ALPHA");
+    lua_pushinteger(L, GL_ONE_MINUS_SRC_ALPHA); lua_setfield(L, -2, "ONE_MINUS_SRC_ALPHA");
+
     
     return 1;
 }
