@@ -20,6 +20,25 @@ static void push_event_constants(lua_State *L) {
     lua_setfield(L, -2, "SDL_WINDOW_OPENGL");
     lua_pushinteger(L, SDL_WINDOW_RESIZABLE);
     lua_setfield(L, -2, "SDL_WINDOW_RESIZABLE");
+
+    // GL attributes
+    lua_pushinteger(L, SDL_GL_RED_SIZE);
+    lua_setfield(L, -2, "SDL_GL_RED_SIZE");
+    lua_pushinteger(L, SDL_GL_GREEN_SIZE);
+    lua_setfield(L, -2, "SDL_GL_GREEN_SIZE");
+    lua_pushinteger(L, SDL_GL_BLUE_SIZE);
+    lua_setfield(L, -2, "SDL_GL_BLUE_SIZE");
+    lua_pushinteger(L, SDL_GL_DOUBLEBUFFER);
+    lua_setfield(L, -2, "SDL_GL_DOUBLEBUFFER");
+    lua_pushinteger(L, SDL_GL_DEPTH_SIZE);
+    lua_setfield(L, -2, "SDL_GL_DEPTH_SIZE");
+    lua_pushinteger(L, SDL_GL_CONTEXT_PROFILE_MASK);
+    lua_setfield(L, -2, "SDL_GL_CONTEXT_PROFILE_MASK");
+    lua_pushinteger(L, SDL_GL_CONTEXT_MAJOR_VERSION);
+    lua_setfield(L, -2, "SDL_GL_CONTEXT_MAJOR_VERSION");
+    lua_pushinteger(L, SDL_GL_CONTEXT_MINOR_VERSION);
+    lua_setfield(L, -2, "SDL_GL_CONTEXT_MINOR_VERSION");
+
     // Subsystem flags
     lua_pushinteger(L, SDL_INIT_VIDEO);
     lua_setfield(L, -2, "SDL_INIT_VIDEO");
@@ -191,6 +210,22 @@ static int sdl_quit(lua_State *L) {
     return 0;
 }
 
+
+static int sdl_gl_reset_attribute(){
+
+    return 1;
+}
+
+static int sdl_gl_set_attribute(){
+
+    return 1;
+}
+
+static int sdl_gl_get_attribute(){
+
+    return 1;
+}
+
 static const struct luaL_Reg sdl_lib[] = {
     {"init", sdl_init},
     {"init_window", sdl_init_window},
@@ -203,5 +238,9 @@ static const struct luaL_Reg sdl_lib[] = {
 int luaopen_module_sdl(lua_State *L) {
     luaL_newlib(L, sdl_lib);
     push_event_constants(L);
+
+
+
+
     return 1;
 }

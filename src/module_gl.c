@@ -429,11 +429,14 @@ static int gl_dummy_uniform_matrix4fv(lua_State *L) {
     return 0;
 }
 
-// Lua: gl.uniform1f(location, value)
-static int gl_uniform1f(lua_State *L) {
+// Lua: gl.uniform4f(location, x, y, z, w)
+static int gl_uniform4f(lua_State *L) {
     GLint location = (GLint)luaL_checkinteger(L, 1);
-    GLfloat value = (GLfloat)luaL_checknumber(L, 2);
-    glUniform1f(location, value);
+    GLfloat x = (GLfloat)luaL_checknumber(L, 2);
+    GLfloat y = (GLfloat)luaL_checknumber(L, 3);
+    GLfloat z = (GLfloat)luaL_checknumber(L, 4);
+    GLfloat w = (GLfloat)luaL_checknumber(L, 5);
+    glUniform4f(location, x, y, z, w);
     return 0;
 }
 
@@ -501,6 +504,21 @@ static int gl_delete_vertex_arrays(lua_State *L) {
     return 0;
 }
 
+
+// Lua: gl.uniform1f(location, value)
+static int gl_uniform1f(lua_State *L) {
+    GLint location = (GLint)luaL_checkinteger(L, 1);
+    GLfloat value = (GLfloat)luaL_checknumber(L, 2);
+    glUniform1f(location, value);
+    return 0;
+}
+
+
+
+
+
+
+
 static const struct luaL_Reg gl_lib[] = {
     {"init", gl_init},
     {"destroy", gl_destroy},
@@ -538,7 +556,8 @@ static const struct luaL_Reg gl_lib[] = {
 
     {"active_texture", gl_active_texture},
     {"uniform1i", gl_uniform1i},
-    {"uniform1f", gl_uniform1f}, 
+    {"uniform1f", gl_uniform1f},
+    {"uniform4f", gl_uniform4f},
     {"enable", gl_enable},
     {"get_error", gl_get_error},
     {"blend_func", gl_blend_func},
@@ -592,6 +611,7 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_TEXTURE_WRAP_S); lua_setfield(L, -2, "TEXTURE_WRAP_S");
     lua_pushinteger(L, GL_TEXTURE_WRAP_T); lua_setfield(L, -2, "TEXTURE_WRAP_T");
     lua_pushinteger(L, GL_CLAMP_TO_EDGE); lua_setfield(L, -2, "CLAMP_TO_EDGE");
+    lua_pushinteger(L, GL_DYNAMIC_DRAW); lua_setfield(L, -2, "DYNAMIC_DRAW");
 
     
     return 1;

@@ -311,3 +311,39 @@ endif()
 #         -static                                 # Avoid full static linking to prevent issues with system libraries
 #     )
 # endif()
+
+
+
+
+
+
+# set(APP_FONT sdl3_font)
+# add_executable(${APP_FONT}
+#     glad/src/gl.c
+#     # examples/c/sdl3_font.c
+#     examples/c/sdl3_font02.c
+#     # examples/c/triangle.c
+# )
+# target_link_libraries(${APP_FONT} PUBLIC 
+#     SDL3::SDL3
+# )
+# target_include_directories(${APP_FONT} PUBLIC
+#     ${CMAKE_SOURCE_DIR}/glad/include
+#     ${stb_SOURCE_DIR}                           # stb
+# )
+# # Platform-specific settings for Windows (MinGW/MSYS2)
+# if (WIN32)
+#     # Link necessary Windows libraries for raylib
+#     target_link_libraries(${APP_FONT} PRIVATE
+#         opengl32                                        # opengl
+#         gdi32                                           # Windows Graphics Device Interface
+#         winmm                                           # Windows Multimedia API 
+#         ws2_32                                          # Winsock 2
+#     )
+#     # Static linking for libgcc and libstdc++
+#     target_link_options(${APP_FONT} PRIVATE
+#         -static-libgcc                                  # GNU Compiler Collection
+#         -static-libstdc++                               # Uncomment if C++ code is used # need for imgui
+#         -static                                         # Avoid full static linking to prevent issues with system libraries
+#     )
+# endif()

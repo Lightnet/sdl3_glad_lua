@@ -42,7 +42,7 @@ int main(int argc, char* argv[]) {
 
     // Create window (800x600, OpenGL-enabled)
     SDL_Window* window = SDL_CreateWindow("Simple Triangle - SDL3 + GLAD 2.0",
-                                          800, 600, SDL_WINDOW_RESIZABLE);
+                                          800, 600, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
     if (!window) {
         printf("Window creation failed: %s\n", SDL_GetError());
         SDL_Quit();

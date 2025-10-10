@@ -56,7 +56,7 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
     - bugs doublebuffer not working to set and get zero.
 - [x] lua 5.4
 - [x] gl load image 2d
-- [ ] gl load font 2d
+- [ ] gl load font 2d (wip)
 - [x] shaders
 - [x] triangle 2D
 - [x] cglm 0.9.6
