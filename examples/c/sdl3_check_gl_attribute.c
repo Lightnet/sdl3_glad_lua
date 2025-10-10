@@ -7,37 +7,37 @@ void print_gl_attributes(const char* stage) {
     int value;
     printf("%s GL context creation:\n", stage);
 
-    if (SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &value) == 0) {
+    if (SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &value)) {
         printf("  SDL_GL_DOUBLEBUFFER: %d\n", value);
     } else {
         printf("  Failed to get SDL_GL_DOUBLEBUFFER: %s\n", SDL_GetError());
     }
 
-    if (SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &value) == 0) {
+    if (SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &value)) {
         printf("  SDL_GL_DEPTH_SIZE: %d\n", value);
     } else {
         printf("  Failed to get SDL_GL_DEPTH_SIZE: %s\n", SDL_GetError());
     }
 
-    if (SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &value) == 0) {
+    if (SDL_GL_GetAttribute(SDL_GL_STENCIL_SIZE, &value)) {
         printf("  SDL_GL_STENCIL_SIZE: %d\n", value);
     } else {
         printf("  Failed to get SDL_GL_STENCIL_SIZE: %s\n", SDL_GetError());
     }
 
-    if (SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &value) == 0) {
+    if (SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &value)) {
         printf("  SDL_GL_MULTISAMPLEBUFFERS: %d\n", value);
     } else {
         printf("  Failed to get SDL_GL_MULTISAMPLEBUFFERS: %s\n", SDL_GetError());
     }
 
-    if (SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &value) == 0) {
+    if (SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &value)) {
         printf("  SDL_GL_MULTISAMPLESAMPLES: %d\n", value);
     } else {
         printf("  Failed to get SDL_GL_MULTISAMPLESAMPLES: %s\n", SDL_GetError());
     }
 
-    if (SDL_GL_GetAttribute(SDL_GL_CONTEXT_FLAGS, &value) == 0) {
+    if (SDL_GL_GetAttribute(SDL_GL_CONTEXT_FLAGS, &value)) {
         printf("  SDL_GL_CONTEXT_FLAGS: %d\n", value);
     } else {
         printf("  Failed to get SDL_GL_CONTEXT_FLAGS: %s\n", SDL_GetError());
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Print attributes before creating GL context/window
-    print_gl_attributes("not set variable");
+    print_gl_attributes("Not Set yet > Get GL SetAttribute");
 
     // Set OpenGL attributes before window creation
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
 
     // Print attributes before creating GL context/window
-    print_gl_attributes("Before");
+    print_gl_attributes("Set GL SetAttribute");
 
     // Create window with OpenGL context
     SDL_Window* window = SDL_CreateWindow("SDL3 GL Attribute Test", 800, 600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
@@ -76,6 +76,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    print_gl_attributes("Window GL GetAttribute");
+
     // Create OpenGL context
     SDL_GLContext context = SDL_GL_CreateContext(window);
     if (context == NULL) {
@@ -84,6 +86,7 @@ int main(int argc, char* argv[]) {
         SDL_Quit();
         return 1;
     }
+    print_gl_attributes("context GL GetAttribute");
 
     // Load OpenGL functions using GLAD 2.0.8
     if (!gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress)) {
@@ -98,7 +101,8 @@ int main(int argc, char* argv[]) {
     printf("GLAD version: %s\n", GLAD_GENERATOR_VERSION);
 
     // Print attributes after GL context creation
-    print_gl_attributes("After");
+    // print_gl_attributes("After");
+    // print_gl_attributes("Current GL GetAttribute");
 
     // Enable multisampling in OpenGL (if supported)
     glEnable(GL_MULTISAMPLE);
