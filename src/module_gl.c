@@ -429,7 +429,77 @@ static int gl_dummy_uniform_matrix4fv(lua_State *L) {
     return 0;
 }
 
+// Lua: gl.uniform1f(location, value)
+static int gl_uniform1f(lua_State *L) {
+    GLint location = (GLint)luaL_checkinteger(L, 1);
+    GLfloat value = (GLfloat)luaL_checknumber(L, 2);
+    glUniform1f(location, value);
+    return 0;
+}
 
+
+// Lua: gl.delete_textures(textures)
+static int gl_delete_textures(lua_State *L) {
+    luaL_checktype(L, 1, LUA_TTABLE);
+    GLsizei n = lua_rawlen(L, 1);
+    GLuint *textures = (GLuint *)malloc(n * sizeof(GLuint));
+    if (!textures) {
+        luaL_error(L, "Failed to allocate memory for textures");
+        return 0;
+    }
+
+    for (int i = 0; i < n; i++) {
+        lua_rawgeti(L, 1, i + 1);
+        textures[i] = (GLuint)luaL_checkinteger(L, -1);
+        lua_pop(L, 1);
+    }
+
+    glDeleteTextures(n, textures);
+    free(textures);
+    return 0;
+}
+
+// Lua: gl.delete_buffers(buffers)
+static int gl_delete_buffers(lua_State *L) {
+    luaL_checktype(L, 1, LUA_TTABLE);
+    GLsizei n = lua_rawlen(L, 1);
+    GLuint *buffers = (GLuint *)malloc(n * sizeof(GLuint));
+    if (!buffers) {
+        luaL_error(L, "Failed to allocate memory for buffers");
+        return 0;
+    }
+
+    for (int i = 0; i < n; i++) {
+        lua_rawgeti(L, 1, i + 1);
+        buffers[i] = (GLuint)luaL_checkinteger(L, -1);
+        lua_pop(L, 1);
+    }
+
+    glDeleteBuffers(n, buffers);
+    free(buffers);
+    return 0;
+}
+
+// Lua: gl.delete_vertex_arrays(arrays)
+static int gl_delete_vertex_arrays(lua_State *L) {
+    luaL_checktype(L, 1, LUA_TTABLE);
+    GLsizei n = lua_rawlen(L, 1);
+    GLuint *arrays = (GLuint *)malloc(n * sizeof(GLuint));
+    if (!arrays) {
+        luaL_error(L, "Failed to allocate memory for vertex arrays");
+        return 0;
+    }
+
+    for (int i = 0; i < n; i++) {
+        lua_rawgeti(L, 1, i + 1);
+        arrays[i] = (GLuint)luaL_checkinteger(L, -1);
+        lua_pop(L, 1);
+    }
+
+    glDeleteVertexArrays(n, arrays);
+    free(arrays);
+    return 0;
+}
 
 static const struct luaL_Reg gl_lib[] = {
     {"init", gl_init},
@@ -468,11 +538,17 @@ static const struct luaL_Reg gl_lib[] = {
 
     {"active_texture", gl_active_texture},
     {"uniform1i", gl_uniform1i},
+    {"uniform1f", gl_uniform1f}, 
     {"enable", gl_enable},
     {"get_error", gl_get_error},
     {"blend_func", gl_blend_func},
-    {"dummy_uniform_matrix4fv", gl_dummy_uniform_matrix4fv}, // Add new function
+    {"dummy_uniform_matrix4fv", gl_dummy_uniform_matrix4fv},
+    {"delete_textures", gl_delete_textures},
+    {"delete_buffers", gl_delete_buffers},
 
+    {"delete_vertex_arrays", gl_delete_vertex_arrays},
+
+    
     {NULL, NULL}
 };
 
@@ -493,6 +569,10 @@ int luaopen_module_gl(lua_State *L) {
 
     lua_pushinteger(L, GL_ELEMENT_ARRAY_BUFFER); lua_setfield(L, -2, "ELEMENT_ARRAY_BUFFER");
     lua_pushinteger(L, GL_UNSIGNED_INT); lua_setfield(L, -2, "UNSIGNED_INT");
+    lua_pushinteger(L, GL_FALSE); lua_setfield(L, -2, "FALSE");
+    lua_pushinteger(L, GL_TRUE); lua_setfield(L, -2, "TRUE");
+    lua_pushinteger(L, GL_ONE); lua_setfield(L, -2, "ONE");
+    lua_pushinteger(L, GL_RED); lua_setfield(L, -2, "RED");
 
     lua_pushinteger(L, GL_TEXTURE_2D); lua_setfield(L, -2, "TEXTURE_2D");
     lua_pushinteger(L, GL_TEXTURE_MIN_FILTER); lua_setfield(L, -2, "TEXTURE_MIN_FILTER");
@@ -504,10 +584,14 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_UNSIGNED_BYTE); lua_setfield(L, -2, "UNSIGNED_BYTE");
 
     lua_pushinteger(L, GL_TEXTURE0); lua_setfield(L, -2, "TEXTURE0");
-
+    lua_pushinteger(L, GL_TEXTURE1); lua_setfield(L, -2, "TEXTURE1");
     lua_pushinteger(L, GL_BLEND); lua_setfield(L, -2, "BLEND");
     lua_pushinteger(L, GL_SRC_ALPHA); lua_setfield(L, -2, "SRC_ALPHA");
     lua_pushinteger(L, GL_ONE_MINUS_SRC_ALPHA); lua_setfield(L, -2, "ONE_MINUS_SRC_ALPHA");
+    lua_pushinteger(L, GL_ALPHA); lua_setfield(L, -2, "ALPHA");
+    lua_pushinteger(L, GL_TEXTURE_WRAP_S); lua_setfield(L, -2, "TEXTURE_WRAP_S");
+    lua_pushinteger(L, GL_TEXTURE_WRAP_T); lua_setfield(L, -2, "TEXTURE_WRAP_T");
+    lua_pushinteger(L, GL_CLAMP_TO_EDGE); lua_setfield(L, -2, "CLAMP_TO_EDGE");
 
     
     return 1;
