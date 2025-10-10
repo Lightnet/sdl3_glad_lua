@@ -28,16 +28,38 @@ static void push_event_constants(lua_State *L) {
     lua_setfield(L, -2, "SDL_GL_GREEN_SIZE");
     lua_pushinteger(L, SDL_GL_BLUE_SIZE);
     lua_setfield(L, -2, "SDL_GL_BLUE_SIZE");
+    lua_pushinteger(L, SDL_GL_ALPHA_SIZE);
+    lua_setfield(L, -2, "SDL_GL_ALPHA_SIZE");
     lua_pushinteger(L, SDL_GL_DOUBLEBUFFER);
     lua_setfield(L, -2, "SDL_GL_DOUBLEBUFFER");
     lua_pushinteger(L, SDL_GL_DEPTH_SIZE);
     lua_setfield(L, -2, "SDL_GL_DEPTH_SIZE");
+    lua_pushinteger(L, SDL_GL_STENCIL_SIZE);
+    lua_setfield(L, -2, "SDL_GL_STENCIL_SIZE");
     lua_pushinteger(L, SDL_GL_CONTEXT_PROFILE_MASK);
     lua_setfield(L, -2, "SDL_GL_CONTEXT_PROFILE_MASK");
     lua_pushinteger(L, SDL_GL_CONTEXT_MAJOR_VERSION);
     lua_setfield(L, -2, "SDL_GL_CONTEXT_MAJOR_VERSION");
     lua_pushinteger(L, SDL_GL_CONTEXT_MINOR_VERSION);
     lua_setfield(L, -2, "SDL_GL_CONTEXT_MINOR_VERSION");
+    lua_pushinteger(L, SDL_GL_CONTEXT_PROFILE_CORE);
+    lua_setfield(L, -2, "SDL_GL_CONTEXT_PROFILE_CORE");
+    lua_pushinteger(L, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+    lua_setfield(L, -2, "SDL_GL_CONTEXT_PROFILE_COMPATIBILITY");
+    lua_pushinteger(L, SDL_GL_CONTEXT_PROFILE_ES);
+    lua_setfield(L, -2, "SDL_GL_CONTEXT_PROFILE_ES");
+    lua_pushinteger(L, SDL_GL_MULTISAMPLEBUFFERS);
+    lua_setfield(L, -2, "SDL_GL_MULTISAMPLEBUFFERS");
+    lua_pushinteger(L, SDL_GL_MULTISAMPLESAMPLES);
+    lua_setfield(L, -2, "SDL_GL_MULTISAMPLESAMPLES");
+    lua_pushinteger(L, SDL_GL_ACCELERATED_VISUAL);
+    lua_setfield(L, -2, "SDL_GL_ACCELERATED_VISUAL");
+    lua_pushinteger(L, SDL_GL_CONTEXT_FLAGS);
+    lua_setfield(L, -2, "SDL_GL_CONTEXT_FLAGS");
+    lua_pushinteger(L, SDL_GL_CONTEXT_DEBUG_FLAG);
+    lua_setfield(L, -2, "SDL_GL_CONTEXT_DEBUG_FLAG");
+    lua_pushinteger(L, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+    lua_setfield(L, -2, "SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG");
 
     // Subsystem flags
     lua_pushinteger(L, SDL_INIT_VIDEO);
@@ -211,18 +233,41 @@ static int sdl_quit(lua_State *L) {
 }
 
 
-static int sdl_gl_reset_attribute(){
-
+// Lua: sdl.gl_reset_attribute() -> bool
+static int sdl_gl_reset_attribute(lua_State *L) {
+    SDL_GL_ResetAttributes();
+    lua_pushboolean(L, 1);
     return 1;
 }
 
-static int sdl_gl_set_attribute(){
 
+// Lua: sdl.gl_set_attribute(attr, value) -> bool, err_msg
+static int sdl_gl_set_attribute(lua_State *L) {
+    SDL_GLAttr attr = (SDL_GLAttr)luaL_checkinteger(L, 1);
+    int value = (int)luaL_checkinteger(L, 2);
+    
+    if (SDL_GL_SetAttribute(attr, value) < 0) {
+        lua_pushboolean(L, 0);
+        lua_pushstring(L, SDL_GetError());
+        return 2;
+    }
+    
+    lua_pushboolean(L, 1);
     return 1;
 }
 
-static int sdl_gl_get_attribute(){
-
+// Lua: sdl.gl_get_attribute(attr) -> value, err_msg
+static int sdl_gl_get_attribute(lua_State *L) {
+    SDL_GLAttr attr = (SDL_GLAttr)luaL_checkinteger(L, 1);
+    int value;
+    
+    if (SDL_GL_GetAttribute(attr, &value) < 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, SDL_GetError());
+        return 2;
+    }
+    
+    lua_pushinteger(L, value);
     return 1;
 }
 
@@ -232,15 +277,15 @@ static const struct luaL_Reg sdl_lib[] = {
     {"poll_events", sdl_poll_events},
     {"poll_events_ig", sdl_poll_events_ig},
     {"quit", sdl_quit},
+    {"gl_reset_attribute", sdl_gl_reset_attribute},
+    {"gl_set_attribute", sdl_gl_set_attribute},
+    {"gl_get_attribute", sdl_gl_get_attribute},
     {NULL, NULL}
 };
 
 int luaopen_module_sdl(lua_State *L) {
     luaL_newlib(L, sdl_lib);
     push_event_constants(L);
-
-
-
-
+    
     return 1;
 }
