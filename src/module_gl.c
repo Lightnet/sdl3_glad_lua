@@ -53,6 +53,18 @@ static int gl_init(lua_State *L) {
     }
 
     // Log OpenGL attributes for debugging
+    // does not work here. After gl is init.
+    // int major, minor, profile, doublebuffer, depth_size;
+    // SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
+    // SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
+    // SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, &profile);
+    // SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &doublebuffer);
+    // SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &depth_size);
+    // printf("GL Attributes: Version %d.%d, Profile %d, Doublebuffer %d, Depth Size %d\n",
+    //        major, minor, profile, doublebuffer, depth_size);
+
+    SDL_GLContext context = SDL_GL_CreateContext(window);
+    // this work
     int major, minor, profile, doublebuffer, depth_size;
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
@@ -62,7 +74,6 @@ static int gl_init(lua_State *L) {
     printf("GL Attributes: Version %d.%d, Profile %d, Doublebuffer %d, Depth Size %d\n",
            major, minor, profile, doublebuffer, depth_size);
 
-    SDL_GLContext context = SDL_GL_CreateContext(window);
     if (!context) {
         lua_pushboolean(L, 0);
         char err_msg[512];

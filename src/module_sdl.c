@@ -111,11 +111,11 @@ static int sdl_init_window(lua_State *L) {
                 if (SDL_GL_GetAttribute(attrs[i].attr, &set_value) < 0) {
                     // fprintf(stderr, "Failed to get %s: %s\n", attrs[i].name, SDL_GetError());
                 } else {
-                    printf("Set %s to %d\n", attrs[i].name, set_value);
-                    if (set_value != attrs[i].value) {
+                    //printf("Set %s to %d\n", attrs[i].name, set_value);
+                    //if (set_value != attrs[i].value) {
                         // fprintf(stderr, "Warning: %s set to %d, expected %d\n", 
                         //         attrs[i].name, set_value, attrs[i].value);
-                    }
+                    //}
                 }
             }
         }
@@ -232,14 +232,12 @@ static int sdl_quit(lua_State *L) {
     return 0;
 }
 
-
 // Lua: sdl.gl_reset_attribute() -> bool
 static int sdl_gl_reset_attribute(lua_State *L) {
     SDL_GL_ResetAttributes();
     lua_pushboolean(L, 1);
     return 1;
 }
-
 
 // Lua: sdl.gl_set_attribute(attr, value) -> bool, err_msg
 static int sdl_gl_set_attribute(lua_State *L) {
