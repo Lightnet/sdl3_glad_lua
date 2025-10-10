@@ -294,10 +294,11 @@ while running do
             local height = y1 - y0
             local offset
             if y1 > y then -- Descender glyph (e.g., ',')
-                -- offset = (descent * scale) - (y1 - y) - 20 -- Align descender to baseline
                 offset = (descent * scale) - (y1 - y) -- Align descender to baseline
+                -- offset = height - max_height - 8
             else
-                offset = height - max_height -- Align non-descenders to baseline
+                -- offset = height - max_height -- Align non-descenders to baseline
+                offset = (descent * scale) - (y1 - y)
             end
 
             -- offset = height - max_height -- Align non-descenders to baseline

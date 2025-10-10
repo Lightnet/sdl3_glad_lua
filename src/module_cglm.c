@@ -409,6 +409,53 @@ static int mat4_ortho(lua_State *L) {
     return 1;
 }
 
+// Lua: cglm.perspective(fovy, aspect, near, far) -> mat4
+static int mat4_perspective(lua_State *L) {
+    float fovy = (float)luaL_checknumber(L, 1);
+    float aspect = (float)luaL_checknumber(L, 2);
+    float near = (float)luaL_checknumber(L, 3);
+    float far = (float)luaL_checknumber(L, 4);
+    mat4 m;
+    glm_perspective(fovy, aspect, near, far, m);
+    push_mat4(L, m);
+    return 1;
+}
+
+
+// Lua: cglm.rotate(matrix, angle, axis) -> mat4
+static int mat4_rotate(lua_State *L) {
+    mat4 *m = check_mat4(L, 1);
+    float angle = (float)luaL_checknumber(L, 2);
+    vec3 *axis = check_vec3(L, 3);
+    mat4 result;
+    glm_mat4_copy(*m, result);
+    glm_rotate(result, angle, *axis);
+    push_mat4(L, result);
+    return 1;
+}
+
+// Lua: cglm.translate(matrix, vec3) -> mat4
+static int mat4_translate(lua_State *L) {
+    mat4 *m = check_mat4(L, 1);
+    vec3 *v = check_vec3(L, 2);
+    mat4 result;
+    glm_mat4_copy(*m, result); // Copy input matrix to result
+    glm_translate(result, *v); // Apply translation to result
+    push_mat4(L, result);
+    return 1;
+}
+
+// Lua: cglm.mul(mat1, mat2) -> mat4
+static int l_mat4_mul(lua_State *L) {
+    mat4 *m1 = check_mat4(L, 1);
+    mat4 *m2 = check_mat4(L, 2);
+    mat4 result;
+    glm_mat4_mul(*m1, *m2, result);
+    push_mat4(L, result);
+    return 1;
+}
+
+
 // Module functions
 static const luaL_Reg module_glm_funcs[] = {
     {"vec3", vec3_new},
@@ -416,6 +463,10 @@ static const luaL_Reg module_glm_funcs[] = {
     {"mat4", mat4_new},
     {"mat4_identity", mat4_identity},
     {"ortho", mat4_ortho},
+    {"perspective", mat4_perspective},
+    {"rotate", mat4_rotate},
+    {"translate", mat4_translate},
+    {"mat4_mul", l_mat4_mul},
     {NULL, NULL}
 };
 

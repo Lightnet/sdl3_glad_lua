@@ -103,10 +103,17 @@ static int gl_init(lua_State *L) {
     return 2; // Return both context and success flag
 }
 
-// GL bindings
 static int gl_clear(lua_State *L) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    return 0;
+    // Check if OpenGL context is valid
+    int ret = check_gl_context(L);
+    if (ret) return ret; // Returns nil and error message if context is invalid
+    // Get the bitmask from Lua (e.g., GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+    GLbitfield mask = (GLbitfield)luaL_checkinteger(L, 1);
+    // Call glClear with the provided bitmask
+    // glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // test
+    glClear(mask);
+
+    return 0; // No return values on success
 }
 
 static int gl_clear_color(lua_State *L) {
@@ -623,6 +630,8 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_TEXTURE_WRAP_T); lua_setfield(L, -2, "TEXTURE_WRAP_T");
     lua_pushinteger(L, GL_CLAMP_TO_EDGE); lua_setfield(L, -2, "CLAMP_TO_EDGE");
     lua_pushinteger(L, GL_DYNAMIC_DRAW); lua_setfield(L, -2, "DYNAMIC_DRAW");
+
+    lua_pushinteger(L, GL_DEPTH_TEST); lua_setfield(L, -2, "DEPTH_TEST");
 
     
     return 1;

@@ -1,5 +1,4 @@
 -- main.lua
-
 local sdl = require("module_sdl")
 local gl = require("module_gl")
 local stb = require("module_stb")
@@ -34,8 +33,8 @@ end
 gl.enable(gl.BLEND)
 gl.blend_func(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
--- Load image
-local image_data, width, height, channels, err = stb.load_image("resources/ph16.png")
+-- Load image with RGBA format
+local image_data, width, height, channels, err = stb.load_image("resources/ph16.png", stb.RGBA)
 if not image_data then
     lua_util.log("Failed to load image: " .. err)
     gl.destroy()
@@ -63,21 +62,8 @@ if not font_data then
 end
 lua_util.log("Font loaded, size: " .. font_size)
 
--- Get font metrics
-local ascent, descent, lineGap, err = stb.get_font_vmetrics(font_data)
-if not ascent then
-    lua_util.log("Failed to get font metrics: " .. err)
-    gl.destroy()
-    sdl.quit()
-    return
-end
-local font_size = 32
-local scale = font_size / ascent
-lua_util.log("Font metrics: ascent=" .. ascent .. ", descent=" .. descent .. ", lineGap=" .. lineGap)
-lua_util.log("Scaled metrics: ascent=" .. (ascent * scale) .. ", descent=" .. (descent * scale))
-
 -- Bake font
-local bitmap, cdata, bitmap_width, bitmap_height, err = stb.bake_font(font_data, font_size, 512, 512)
+local bitmap, cdata, bitmap_width, bitmap_height, err = stb.bake_font(font_data, 32, 512, 512)
 if not bitmap then
     lua_util.log("Failed to bake font: " .. err)
     gl.destroy()
@@ -86,11 +72,15 @@ if not bitmap then
 end
 lua_util.log("Font baked: " .. bitmap_width .. "x" .. bitmap_height)
 
--- Debug bitmap
-local success, err = stb.dump_bitmap(bitmap, bitmap_width, bitmap_height)
-if not success then
-    lua_util.log("Failed to dump bitmap: " .. err)
+-- Get font metrics
+local ascent, descent, lineGap, err = stb.get_font_metrics(font_data, 32)
+if not ascent then
+    lua_util.log("Failed to get font metrics: " .. err)
+    gl.destroy()
+    sdl.quit()
+    return
 end
+lua_util.log("Font metrics: ascent=" .. ascent .. ", descent=" .. descent .. ", lineGap=" .. lineGap)
 
 -- Create and set up text texture
 local text_texture = gl.gen_textures()
@@ -259,10 +249,24 @@ for col = 0, 3 do
     end
 end
 
+-- Calculate text width for centering
+local text = "Hello, World!"
+local text_width = 0
+local x = 400
+local y = 600 - 128 - 50 -- Below image quad
+for i = 1, #text do
+    local char = string.byte(text, i)
+    local x0, y0, x1, y1, s0, t0, s1, t1, x_advance = stb.get_baked_quad(cdata, bitmap_width, bitmap_height, char, x, y)
+    if x0 then
+        text_width = text_width + x_advance
+        x = x + x_advance
+    end
+end
+x = 400 - text_width / 2 -- Center horizontally
+lua_util.log("Text width: " .. text_width .. ", Start x: " .. x)
+
 -- Main loop
 local running = true
-local text = "Hello, World!"
-local max_height = ascent * scale -- Maximum glyph height (32 pixels)
 while running do
     -- Handle events
     local events = sdl.poll_events()
@@ -279,55 +283,65 @@ while running do
                     lua_util.log(string.format("projection[%d][%d] = %f", row, col, value))
                 end
             end
+            -- Recalculate text width for new window size
+            text_width = 0
+            x = event.width / 2
+            for i = 1, #text do
+                local char = string.byte(text, i)
+                local x0, y0, x1, y1, s0, t0, s1, t1, x_advance = stb.get_baked_quad(cdata, bitmap_width, bitmap_height, char, x, y)
+                if x0 then
+                    text_width = text_width + x_advance
+                    x = x + x_advance
+                end
+            end
+            x = event.width / 2 - text_width / 2
+            lua_util.log("Resized - Text width: " .. text_width .. ", Start x: " .. x)
         end
     end
 
     -- Generate text vertices
     local vertices = {}
-    local x = 400
-    local y = 600 - 128 - 50 -- Baseline position below image (y=422)
+    local baseline = y + ascent -- Align to baseline
     for i = 1, #text do
         local char = string.byte(text, i)
         local x0, y0, x1, y1, s0, t0, s1, t1, x_advance = stb.get_baked_quad(cdata, bitmap_width, bitmap_height, char, x, y)
         if x0 then
-            -- Calculate glyph height and offset to align to baseline
-            local height = y1 - y0
-            local offset = max_height - height -- Move smaller glyphs down
-            y0 = y0 + offset
-            y1 = y1 + offset
+            -- Adjust y0, y1 to baseline
+            y0 = baseline - ascent
+            y1 = baseline
             -- Flip texture coordinates in Y
             local t0_flipped = t1
             local t1_flipped = t0
-            -- Triangle 1 (top-left, top-right, bottom-right)
-            vertices[#vertices + 1] = x0
-            vertices[#vertices + 1] = y1
-            vertices[#vertices + 1] = s0
-            vertices[#vertices + 1] = t1_flipped
-            vertices[#vertices + 1] = x1
-            vertices[#vertices + 1] = y1
-            vertices[#vertices + 1] = s1
-            vertices[#vertices + 1] = t1_flipped
-            vertices[#vertices + 1] = x1
-            vertices[#vertices + 1] = y0
-            vertices[#vertices + 1] = s1
-            vertices[#vertices + 1] = t0_flipped
-            -- Triangle 2 (top-left, bottom-right, bottom-left)
-            vertices[#vertices + 1] = x0
-            vertices[#vertices + 1] = y1
-            vertices[#vertices + 1] = s0
-            vertices[#vertices + 1] = t1_flipped
-            vertices[#vertices + 1] = x1
-            vertices[#vertices + 1] = y0
-            vertices[#vertices + 1] = s1
-            vertices[#vertices + 1] = t0_flipped
+            -- Triangle 1
             vertices[#vertices + 1] = x0
             vertices[#vertices + 1] = y0
             vertices[#vertices + 1] = s0
             vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = x1
+            vertices[#vertices + 1] = y0
+            vertices[#vertices + 1] = s1
+            vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = x1
+            vertices[#vertices + 1] = y1
+            vertices[#vertices + 1] = s1
+            vertices[#vertices + 1] = t1_flipped
+            -- Triangle 2
+            vertices[#vertices + 1] = x0
+            vertices[#vertices + 1] = y0
+            vertices[#vertices + 1] = s0
+            vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = x1
+            vertices[#vertices + 1] = y1
+            vertices[#vertices + 1] = s1
+            vertices[#vertices + 1] = t1_flipped
+            vertices[#vertices + 1] = x0
+            vertices[#vertices + 1] = y1
+            vertices[#vertices + 1] = s0
+            vertices[#vertices + 1] = t1_flipped
             x = x + x_advance
-            lua_util.log(string.format("Char %d: x0=%.2f, y0=%.2f, x1=%.2f, y1=%.2f, s0=%.2f, t0=%.2f, s1=%.2f, t1=%.2f, x_advance=%.2f, height=%.2f, offset=%.2f", char, x0, y0, x1, y1, s0, t0, s1, t1, x_advance, height, offset))
+            lua_util.log(string.format("Char %d: x0=%.2f, y0=%.2f, x1=%.2f, y1=%.2f, s0=%.2f, t0=%.2f, s1=%.2f, t1=%.2f, x_advance=%.2f", char, x0, y0, x1, y1, s0, t0, s1, t1, x_advance))
         else
-            lua_util.log("Failed to get quad for char " .. char .. ": " .. (err or "unknown error"))
+            lua_util.log("Failed to get quad for char " .. char .. ": " .. err)
         end
     end
     local text_vertexData = ""
@@ -335,7 +349,7 @@ while running do
         text_vertexData = text_vertexData .. string.pack("f", v)
     end
     lua_util.log("Text vertices: " .. #vertices)
-    lua_util.log("Final text position: x=" .. x .. ", y=" .. y)
+    lua_util.log("Text width: " .. text_width .. ", Start x: " .. (400 - text_width / 2) .. ", End x: " .. x .. ", y: " .. y)
 
     -- Render
     gl.clear_color(0.2, 0.3, 0.3, 1.0)
