@@ -275,7 +275,7 @@ static int gl_vertex_attrib_pointer(lua_State *L) {
     GLuint index = (GLuint)luaL_checkinteger(L, 1);
     GLint size = (GLint)luaL_checkinteger(L, 2);
     GLenum type = (GLenum)luaL_checkinteger(L, 3);
-    GLboolean normalized = (GLboolean)lua_toboolean(L, 4);
+    GLboolean normalized = (GLboolean)luaL_checkinteger(L, 4);
     GLsizei stride = (GLsizei)luaL_checkinteger(L, 5);
     size_t offset = (size_t)luaL_checkinteger(L, 6);
     glVertexAttribPointer(index, size, type, normalized, stride, (void *)offset);

@@ -12,37 +12,41 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
-if not window then
+success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+if not success then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
     return
 end
 
 -- Initialize OpenGL
-local success, gl_context, err = gl.init(window)
+success, err = gl.init()
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
     sdl.quit()
     return
 end
 
--- Vertex Shader with MVP matrix
+-- Vertex Shader with MVP matrix and vertex color
 local vertex_shader_source = [[
 #version 330 core
 layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+out vec3 vertexColor;
 uniform mat4 mvp;
 void main() {
     gl_Position = mvp * vec4(aPos, 1.0);
+    vertexColor = aColor;
 }
 ]]
 
 -- Fragment Shader
 local fragment_shader_source = [[
 #version 330 core
+in vec3 vertexColor;
 out vec4 FragColor;
 void main() {
-    FragColor = vec4(1.0, 0.5, 0.2, 1.0); // Orange color
+    FragColor = vec4(vertexColor, 1.0);
 }
 ]]
 
@@ -80,47 +84,50 @@ if not success then
     return
 end
 
--- Cube vertex data (8 vertices: x, y, z)
+-- Cube vertex data (8 vertices: x, y, z, r, g, b)
 local vertices = {
     -- Front face
-    -0.5, -0.5,  0.5,  -- Bottom-left-front
-     0.5, -0.5,  0.5,  -- Bottom-right-front
-     0.5,  0.5,  0.5,  -- Top-right-front
-    -0.5,  0.5,  0.5,  -- Top-left-front
+    -0.5, -0.5,  0.5,  1.0, 0.0, 0.0,  -- Bottom-left-front (red)
+     0.5, -0.5,  0.5,  0.0, 1.0, 0.0,  -- Bottom-right-front (green)
+     0.5,  0.5,  0.5,  0.0, 0.0, 1.0,  -- Top-right-front (blue)
+    -0.5,  0.5,  0.5,  1.0, 1.0, 0.0,  -- Top-left-front (yellow)
     -- Back face
-    -0.5, -0.5, -0.5,  -- Bottom-left-back
-     0.5, -0.5, -0.5,  -- Bottom-right-back
-     0.5,  0.5, -0.5,  -- Top-right-back
-    -0.5,  0.5, -0.5   -- Top-left-back
+    -0.5, -0.5, -0.5,  1.0, 0.0, 1.0,  -- Bottom-left-back (magenta)
+     0.5, -0.5, -0.5,  0.0, 1.0, 1.0,  -- Bottom-right-back (cyan)
+     0.5,  0.5, -0.5,  1.0, 0.5, 0.0,  -- Top-right-back (orange)
+    -0.5,  0.5, -0.5,  0.5, 0.5, 0.5   -- Top-left-back (gray)
 }
 
--- Cube indices (36 indices for 12 triangles)
+-- Cube indices (36 indices for 12 triangles, counterclockwise winding)
 local indices = {
     -- Front face
-    0, 1, 2,  0, 2, 3,
+    0, 1, 2,  2, 3, 0,
     -- Right face
-    1, 5, 6,  1, 6, 2,
+    1, 5, 6,  6, 2, 1,
     -- Back face
-    5, 4, 7,  5, 7, 6,
+    5, 4, 7,  7, 6, 5,
     -- Left face
-    4, 0, 3,  4, 3, 7,
+    4, 0, 3,  3, 7, 4,
     -- Top face
-    3, 2, 6,  3, 6, 7,
+    3, 2, 6,  6, 7, 3,
     -- Bottom face
-    0, 4, 5,  0, 5, 1
+    4, 5, 1,  1, 0, 4
 }
 
--- Convert vertices to binary string
+-- Convert vertices to binary string (position + color)
 local vertex_data = ""
 for _, v in ipairs(vertices) do
     vertex_data = vertex_data .. string.pack("f", v)
 end
+print("vertex_data:" .. vertex_data)
 
 -- Convert indices to binary string (unsigned int)
 local index_data = ""
 for _, i in ipairs(indices) do
     index_data = index_data .. string.pack("I", i)
 end
+print("index_data:" .. index_data)
+
 
 -- Set up VAO, VBO, and EBO
 local vao = gl.gen_vertex_arrays()
@@ -134,12 +141,17 @@ local ebo = gl.gen_buffers()
 gl.bind_buffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
 gl.buffer_data(gl.ELEMENT_ARRAY_BUFFER, index_data, #index_data, gl.STATIC_DRAW)
 
--- Set vertex attributes
-gl.vertex_attrib_pointer(0, 3, gl.FLOAT, false, 3 * 4, 0)
+-- Set vertex attributes (position and color)
+gl.vertex_attrib_pointer(0, 3, gl.FLOAT, false, 6 * 4, 0) -- Position (3 floats)
 gl.enable_vertex_attrib_array(0)
+gl.vertex_attrib_pointer(1, 3, gl.FLOAT, false, 6 * 4, 3 * 4) -- Color (3 floats, offset by 3 floats)
+gl.enable_vertex_attrib_array(1)
 
 -- Enable depth testing
 gl.enable(gl.DEPTH_TEST)
+
+-- Disable face culling to ensure all faces are visible
+gl.cull_face(gl.FALSE)
 
 -- Set initial viewport
 gl.viewport(0, 0, 800, 600)
@@ -151,7 +163,8 @@ view = cglm.translate(view, cglm.vec3(0, 0, -3)) -- Move camera back
 local model = cglm.mat4_identity()
 
 -- Animation variables
-local angle = 0
+local angle_y = 0
+local angle_z = 0
 
 -- Main loop
 local running = true
@@ -167,11 +180,13 @@ while running do
         end
     end
 
-    -- Update rotation
-    angle = angle + 0.01
-    print("angle: ".. angle)
+    -- Update rotation (mimic C code's Y and Z rotations)
+    angle_y = angle_y + 0.01
+    angle_z = angle_z + 0.01
+    print("angle_y: " .. angle_y .. ", angle_z: " .. angle_z)
     model = cglm.mat4_identity()
-    model = cglm.rotate(model, angle, cglm.vec3(1, 1, 0)) -- Rotate around (1,1,0) axis
+    model = cglm.rotate(model, angle_y, cglm.vec3(0, 1, 0)) -- Rotate around Y-axis
+    model = cglm.rotate(model, angle_z, cglm.vec3(0, 0, 1)) -- Rotate around Z-axis
 
     -- Compute MVP matrix
     local mvp = cglm.mat4_mul(projection, view)
@@ -188,13 +203,18 @@ while running do
     gl.bind_vertex_array(vao)
     gl.draw_elements(gl.TRIANGLES, #indices, gl.UNSIGNED_INT, 0)
 
-    sdl.gl_swap_window(window)
+    -- Check for OpenGL errors
+    local err_code = gl.get_error()
+    if err_code ~= 0 then
+        lua_util.log("OpenGL error: " .. err_code)
+    end
+
+    gl.swap_buffers()
 end
 
 -- Cleanup
 gl.delete_vertex_arrays({vao})
-gl.delete_buffers({vbo})
-gl.delete_buffers({ebo})
+gl.delete_buffers({vbo, ebo})
 gl.delete_shader(vertex_shader)
 gl.delete_shader(fragment_shader)
 gl.delete_program(shader_program)

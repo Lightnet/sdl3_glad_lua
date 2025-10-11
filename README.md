@@ -60,6 +60,7 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
     - misconfig setup.
 - [x] shaders
 - [x] triangle 2D
+- [x] cube 3D
 - [x] cglm 0.9.6
 - [ ] network
 - [ ] ...

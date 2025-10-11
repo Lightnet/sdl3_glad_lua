@@ -306,14 +306,37 @@ static int mat4_identity(lua_State *L) {
     return 1;
 }
 
+// static int mat4_mul(lua_State *L) {
+//     mat4 *m1 = check_mat4(L, 1);
+//     mat4 *m2 = check_mat4(L, 2);
+//     mat4 result;
+//     glm_mat4_mul(*m1, *m2, result);
+//     push_mat4(L, result);
+//     return 1;
+// }
+
 static int mat4_mul(lua_State *L) {
-    mat4 *m1 = check_mat4(L, 1);
-    mat4 *m2 = check_mat4(L, 2);
+    mat4 *a = check_mat4(L, 1);
+    mat4 *b = check_mat4(L, 2);
     mat4 result;
-    glm_mat4_mul(*m1, *m2, result);
+    glm_mat4_mul(*a, *b, result); // A * B
+    printf("mat4_mul input A:\n");
+    for (int i = 0; i < 4; i++) {
+        printf("  [%d]: %f, %f, %f, %f\n", i, (*a)[i][0], (*a)[i][1], (*a)[i][2], (*a)[i][3]);
+    }
+    printf("mat4_mul input B:\n");
+    for (int i = 0; i < 4; i++) {
+        printf("  [%d]: %f, %f, %f, %f\n", i, (*b)[i][0], (*b)[i][1], (*b)[i][2], (*b)[i][3]);
+    }
+    printf("mat4_mul result (A * B):\n");
+    for (int i = 0; i < 4; i++) {
+        printf("  [%d]: %f, %f, %f, %f\n", i, result[i][0], result[i][1], result[i][2], result[i][3]);
+    }
     push_mat4(L, result);
     return 1;
 }
+
+
 
 static int mat4_get(lua_State *L) {
     mat4 *m = check_mat4(L, 1);
@@ -445,12 +468,18 @@ static int mat4_translate(lua_State *L) {
     return 1;
 }
 
-// Lua: cglm.mul(mat1, mat2) -> mat4
-static int l_mat4_mul(lua_State *L) {
-    mat4 *m1 = check_mat4(L, 1);
-    mat4 *m2 = check_mat4(L, 2);
+static int debug_perspective(lua_State *L) {
+    float fovy = glm_rad(45.0f);
+    float aspect = 800.0f / 600.0f;
+    float near = 0.1f;
+    float far = 100.0f;
     mat4 result;
-    glm_mat4_mul(*m1, *m2, result);
+    glm_perspective(fovy, aspect, near, far, result);
+    printf("Debug perspective matrix:\n");
+    printf("  [0]: %f, %f, %f, %f\n", result[0][0], result[0][1], result[0][2], result[0][3]);
+    printf("  [1]: %f, %f, %f, %f\n", result[1][0], result[1][1], result[1][2], result[1][3]);
+    printf("  [2]: %f, %f, %f, %f\n", result[2][0], result[2][1], result[2][2], result[2][3]);
+    printf("  [3]: %f, %f, %f, %f\n", result[3][0], result[3][1], result[3][2], result[3][3]);
     push_mat4(L, result);
     return 1;
 }
@@ -466,7 +495,8 @@ static const luaL_Reg module_glm_funcs[] = {
     {"perspective", mat4_perspective},
     {"rotate", mat4_rotate},
     {"translate", mat4_translate},
-    {"mat4_mul", l_mat4_mul},
+    {"mat4_mul", mat4_mul},
+    {"debug_perspective", debug_perspective},
     {NULL, NULL}
 };
 

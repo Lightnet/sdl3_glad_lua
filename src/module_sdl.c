@@ -82,16 +82,16 @@ static int sdl_init(lua_State *L) {
     return 1;
 }
 
-// Lua: sdl.init_window(width, height, flags) -> bool, err_msg
-static int sdl_init_window(lua_State *L) {
-    int width = (int)luaL_checkinteger(L, 1);
-    int height = (int)luaL_checkinteger(L, 2);
-    Uint32 flags = (Uint32)luaL_checkinteger(L, 3);
 
-    // If OpenGL flag is set, configure GL attributes
+// Lua: sdl.init_window(title, width, height, flags) -> window, err_msg
+static int sdl_init_window(lua_State *L) {
+    const char *title = luaL_checkstring(L, 1);
+    int width = (int)luaL_checkinteger(L, 2);
+    int height = (int)luaL_checkinteger(L, 3);
+    Uint32 flags = (Uint32)luaL_checkinteger(L, 4);
+
     if (flags & SDL_WINDOW_OPENGL) {
         SDL_GL_ResetAttributes();
-        // Set attributes in a specific order
         const struct { SDL_GLAttr attr; const char *name; int value; } attrs[] = {
             { SDL_GL_RED_SIZE, "SDL_GL_RED_SIZE", 8 },
             { SDL_GL_GREEN_SIZE, "SDL_GL_GREEN_SIZE", 8 },
@@ -110,40 +110,30 @@ static int sdl_init_window(lua_State *L) {
                 int set_value;
                 if (SDL_GL_GetAttribute(attrs[i].attr, &set_value) < 0) {
                     // fprintf(stderr, "Failed to get %s: %s\n", attrs[i].name, SDL_GetError());
-                } else {
-                    //printf("Set %s to %d\n", attrs[i].name, set_value);
-                    //if (set_value != attrs[i].value) {
-                        // fprintf(stderr, "Warning: %s set to %d, expected %d\n", 
-                        //         attrs[i].name, set_value, attrs[i].value);
-                    //}
                 }
             }
         }
     }
 
-    SDL_Window *window = SDL_CreateWindow("Lua+SDL3+GL", width, height, flags);
+    SDL_Window *window = SDL_CreateWindow(title, width, height, flags);
     if (!window) {
-        lua_pushboolean(L, 0);
+        lua_pushnil(L);
         lua_pushstring(L, SDL_GetError());
         return 2;
     }
 
-    // Store window in global sdl_window
-    lua_pushlightuserdata(L, window);
-    lua_setglobal(L, "sdl_window");
-
-    // Set Lua state as window property
     SDL_PropertiesID props = SDL_GetWindowProperties(window);
     if (!SDL_SetPointerProperty(props, "lua_state", L)) {
         SDL_DestroyWindow(window);
-        lua_pushboolean(L, 0);
+        lua_pushnil(L);
         lua_pushstring(L, SDL_GetError());
         return 2;
     }
 
-    lua_pushboolean(L, 1);
+    lua_pushlightuserdata(L, window);
     return 1;
 }
+
 
 // Lua: sdl.poll_events() -> table of events
 static int sdl_poll_events(lua_State *L) {
@@ -269,6 +259,23 @@ static int sdl_gl_get_attribute(lua_State *L) {
     return 1;
 }
 
+// Lua: sdl.gl_swap_window(window)
+static int sdl_gl_swap_window(lua_State *L) {
+    if (!lua_islightuserdata(L, 1)) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Expected light userdata for window");
+        return 2;
+    }
+    SDL_Window *window = (SDL_Window *)lua_touserdata(L, 1);
+    if (!window) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Invalid window handle");
+        return 2;
+    }
+    SDL_GL_SwapWindow(window);
+    return 0;
+}
+
 static const struct luaL_Reg sdl_lib[] = {
     {"init", sdl_init},
     {"init_window", sdl_init_window},
@@ -278,6 +285,7 @@ static const struct luaL_Reg sdl_lib[] = {
     {"gl_reset_attribute", sdl_gl_reset_attribute},
     {"gl_set_attribute", sdl_gl_set_attribute},
     {"gl_get_attribute", sdl_gl_get_attribute},
+    {"gl_swap_window", sdl_gl_swap_window},
     {NULL, NULL}
 };
 

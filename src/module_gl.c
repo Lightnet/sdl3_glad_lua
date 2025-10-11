@@ -8,11 +8,13 @@
 // Static variable to store the OpenGL context
 static SDL_GLContext g_gl_context = NULL;
 
-// Forward: Get window from Lua global
+// Helper: Get window from Lua argument
 static SDL_Window *get_sdl_window(lua_State *L) {
-    lua_getglobal(L, "sdl_window");
-    SDL_Window *window = (SDL_Window *)lua_topointer(L, -1);
-    lua_pop(L, 1);
+    if (!lua_islightuserdata(L, 1)) {
+        luaL_error(L, "Expected light userdata for window");
+        return NULL;
+    }
+    SDL_Window *window = (SDL_Window *)lua_touserdata(L, 1);
     return window;
 }
 
@@ -37,34 +39,24 @@ static int gl_get_gl_context(lua_State *L) {
     return 1;
 }
 
-// Lua: module_gl.init() -> bool, err_msg (creates context, loads GLAD, stores as gl.gl_context)
+// Lua: gl.init(window) -> bool, context, err_msg
 static int gl_init(lua_State *L) {
     SDL_Window *window = get_sdl_window(L);
     if (!window) {
         lua_pushboolean(L, 0);
+        lua_pushnil(L);
         lua_pushstring(L, "No window found");
-        return 2;
+        return 3;
     }
     Uint32 flags = SDL_GetWindowFlags(window);
     if (!(flags & SDL_WINDOW_OPENGL)) {
         lua_pushboolean(L, 0);
+        lua_pushnil(L);
         lua_pushstring(L, "Window is not an OpenGL window");
-        return 2;
+        return 3;
     }
 
-    // Log OpenGL attributes for debugging
-    // does not work here. After gl is init.
-    // int major, minor, profile, doublebuffer, depth_size;
-    // SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
-    // SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
-    // SDL_GL_GetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, &profile);
-    // SDL_GL_GetAttribute(SDL_GL_DOUBLEBUFFER, &doublebuffer);
-    // SDL_GL_GetAttribute(SDL_GL_DEPTH_SIZE, &depth_size);
-    // printf("GL Attributes: Version %d.%d, Profile %d, Doublebuffer %d, Depth Size %d\n",
-    //        major, minor, profile, doublebuffer, depth_size);
-
     SDL_GLContext context = SDL_GL_CreateContext(window);
-    // this work
     int major, minor, profile, doublebuffer, depth_size;
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, &major);
     SDL_GL_GetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, &minor);
@@ -76,17 +68,19 @@ static int gl_init(lua_State *L) {
 
     if (!context) {
         lua_pushboolean(L, 0);
+        lua_pushnil(L);
         char err_msg[512];
         snprintf(err_msg, 512, "SDL_GL_CreateContext failed: %s", SDL_GetError());
         lua_pushstring(L, err_msg);
-        return 2;
+        return 3;
     }
 
     if (!gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress)) {
         lua_pushboolean(L, 0);
+        lua_pushnil(L);
         lua_pushstring(L, "Failed to load OpenGL functions");
         SDL_GL_DestroyContext(context);
-        return 2;
+        return 3;
     }
 
     if (SDL_GL_SetSwapInterval(1) < 0) {
@@ -95,12 +89,11 @@ static int gl_init(lua_State *L) {
 
     printf("OpenGL loaded: %s %s\n", glGetString(GL_VERSION), glGetString(GL_RENDERER));
 
-    // Store context in static variable
     g_gl_context = context;
 
-    lua_pushlightuserdata(L, context);
     lua_pushboolean(L, 1);
-    return 2; // Return both context and success flag
+    lua_pushlightuserdata(L, context);
+    return 3;
 }
 
 static int gl_clear(lua_State *L) {
@@ -131,14 +124,6 @@ static int gl_viewport(lua_State *L) {
     int w = (int)luaL_checkinteger(L, 3);
     int h = (int)luaL_checkinteger(L, 4);
     glViewport(x, y, w, h);
-    return 0;
-}
-
-static int gl_swap_buffers(lua_State *L) {
-    SDL_Window *window = get_sdl_window(L);
-    if (window) {
-        SDL_GL_SwapWindow(window);
-    }
     return 0;
 }
 
@@ -296,7 +281,6 @@ static int gl_delete_program(lua_State *L) {
     return 0;
 }
 
-
 // Lua: gl.gen_textures() -> texture_id
 static int gl_gen_textures(lua_State *L) {
     GLuint texture;
@@ -354,12 +338,11 @@ static mat4* check_mat4(lua_State *L, int idx) {
     return (mat4*)ud;
 }
 
-
 // Lua: gl.uniform_matrix4fv(location, count, transpose, matrix)
 static int gl_uniform_matrix4fv(lua_State *L) {
     GLint location = (GLint)luaL_checkinteger(L, 1);
     GLsizei count = (GLsizei)luaL_checkinteger(L, 2);
-    GLboolean transpose = (GLboolean)lua_toboolean(L, 3);
+    GLboolean transpose = (GLboolean)luaL_checkinteger(L, 3);
     
     // Check if the 4th argument is a cglm mat4 userdata
     if (luaL_testudata(L, 4, "cglm.mat4")) {
@@ -458,7 +441,6 @@ static int gl_uniform4f(lua_State *L) {
     return 0;
 }
 
-
 // Lua: gl.delete_textures(textures)
 static int gl_delete_textures(lua_State *L) {
     luaL_checktype(L, 1, LUA_TTABLE);
@@ -522,7 +504,6 @@ static int gl_delete_vertex_arrays(lua_State *L) {
     return 0;
 }
 
-
 // Lua: gl.uniform1f(location, value)
 static int gl_uniform1f(lua_State *L) {
     GLint location = (GLint)luaL_checkinteger(L, 1);
@@ -531,12 +512,6 @@ static int gl_uniform1f(lua_State *L) {
     return 0;
 }
 
-
-
-
-
-
-
 static const struct luaL_Reg gl_lib[] = {
     {"init", gl_init},
     {"destroy", gl_destroy},
@@ -544,7 +519,6 @@ static const struct luaL_Reg gl_lib[] = {
     {"clear", gl_clear},
     {"clear_color", gl_clear_color},
     {"viewport", gl_viewport},
-    {"swap_buffers", gl_swap_buffers},
     {"create_shader", gl_create_shader},
     {"delete_shader", gl_delete_shader},
     {"shader_source", gl_shader_source},
@@ -633,6 +607,5 @@ int luaopen_module_gl(lua_State *L) {
 
     lua_pushinteger(L, GL_DEPTH_TEST); lua_setfield(L, -2, "DEPTH_TEST");
 
-    
     return 1;
 }
