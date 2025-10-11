@@ -1,24 +1,28 @@
--- cube3d_test.lua
+-- cube3d.lua
 local sdl = require("module_sdl")
 local gl = require("module_gl")
 local cglm = require("module_cglm")
 
--- Simple vertex shader
+-- Vertex shader source
 local vertex_shader_source = [[
 #version 330 core
 layout (location = 0) in vec3 aPos;
+layout (location = 1) in vec3 aColor;
+out vec3 vertexColor;
 uniform mat4 mvp;
 void main() {
     gl_Position = mvp * vec4(aPos, 1.0);
+    vertexColor = aColor;
 }
 ]]
 
--- Simple fragment shader (white cube for clarity)
+-- Fragment shader source
 local fragment_shader_source = [[
 #version 330 core
 out vec4 FragColor;
+in vec3 vertexColor;
 void main() {
-    FragColor = vec4(1.0, 1.0, 1.0, 1.0); // White
+    FragColor = vec4(vertexColor, 1.0);
 }
 ]]
 
@@ -32,8 +36,6 @@ end
 sdl.gl_set_attribute(sdl.GL_CONTEXT_PROFILE_MASK, sdl.GL_CONTEXT_PROFILE_CORE)
 sdl.gl_set_attribute(sdl.GL_CONTEXT_MAJOR_VERSION, 3)
 sdl.gl_set_attribute(sdl.GL_CONTEXT_MINOR_VERSION, 3)
-sdl.gl_set_attribute(sdl.GL_DOUBLEBUFFER, 1)
-sdl.gl_set_attribute(sdl.GL_DEPTH_SIZE, 24)
 
 -- Create window
 ok, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_RESIZABLE + sdl.SDL_WINDOW_OPENGL)
@@ -42,53 +44,50 @@ if not ok then
     error("Window creation failed: " .. err)
 end
 
--- Initialize OpenGL
+-- Initialize OpenGL context
 ok, err = gl.init()
 if not ok then
     sdl.quit()
     error("GL init failed: " .. err)
 end
 
--- Print depth buffer size
-local depth_size = sdl.gl_get_attribute(sdl.GL_DEPTH_SIZE)
-print("Depth size:", depth_size)
-
 -- Set viewport
 gl.viewport(0, 0, 800, 600)
 
--- Cube vertices (position only)
+-- Cube vertices (position and color)
 local vertices = {
     -- Front face
-    -0.5, -0.5,  0.5, -- 0
-     0.5, -0.5,  0.5, -- 1
-     0.5,  0.5,  0.5, -- 2
-    -0.5,  0.5,  0.5, -- 3
+    -0.5, -0.5,  0.5,  1.0, 0.0, 0.0,  -- Bottom-left-front (red)
+     0.5, -0.5,  0.5,  0.0, 1.0, 0.0,  -- Bottom-right-front (green)
+     0.5,  0.5,  0.5,  0.0, 0.0, 1.0,  -- Top-right-front (blue)
+    -0.5,  0.5,  0.5,  1.0, 1.0, 0.0,  -- Top-left-front (yellow)
     -- Back face
-    -0.5, -0.5, -0.5, -- 4
-     0.5, -0.5, -0.5, -- 5
-     0.5,  0.5, -0.5, -- 6
-    -0.5,  0.5, -0.5  -- 7
+    -0.5, -0.5, -0.5,  1.0, 0.0, 1.0,  -- Bottom-left-back (magenta)
+     0.5, -0.5, -0.5,  0.0, 1.0, 1.0,  -- Bottom-right-back (cyan)
+     0.5,  0.5, -0.5,  1.0, 0.5, 0.0,  -- Top-right-back (orange)
+    -0.5,  0.5, -0.5,  0.5, 0.5, 0.5   -- Top-left-back (gray)
 }
 
 -- Cube indices
 local indices = {
-    1, 2, 3,  3, 4, 1, -- Front
-    5, 6, 7,  7, 8, 5, -- Back
-    5, 1, 4,  4, 8, 5, -- Left
-    2, 6, 7,  7, 3, 2, -- Right
-    4, 3, 7,  7, 8, 4, -- Top
-    5, 6, 2,  2, 1, 5  -- Bottom
+    1, 2, 3,  3, 4, 1,  -- Front
+    6, 5, 8,  8, 7, 6,  -- Back
+    5, 1, 4,  4, 8, 5,  -- Left
+    2, 6, 7,  7, 3, 2,  -- Right
+    4, 3, 7,  7, 8, 4,  -- Top
+    5, 6, 2,  2, 1, 5   -- Bottom
 }
 
--- Compile shaders
+-- Compile vertex shader
 local vertex_shader = gl.create_shader(gl.VERTEX_SHADER)
 gl.shader_source(vertex_shader, vertex_shader_source)
-ok, err = gl.compile_shader(vertex_shader)
+local ok, err = gl.compile_shader(vertex_shader)
 if not ok then
     gl.delete_shader(vertex_shader)
     error("Vertex shader compilation failed: " .. err)
 end
 
+-- Compile fragment shader
 local fragment_shader = gl.create_shader(gl.FRAGMENT_SHADER)
 gl.shader_source(fragment_shader, fragment_shader_source)
 ok, err = gl.compile_shader(fragment_shader)
@@ -122,15 +121,16 @@ gl.buffer_data(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
 gl.bind_buffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
 gl.buffer_data_uint(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW)
 
-gl.vertex_attrib_pointer(0, 3, gl.FLOAT, gl.FALSE, 3 * 4, 0)
+gl.vertex_attrib_pointer(0, 3, gl.FLOAT, gl.FALSE, 6 * 4, 0)
 gl.enable_vertex_attrib_array(0)
+gl.vertex_attrib_pointer(1, 3, gl.FLOAT, gl.FALSE, 6 * 4, 3 * 4)
+gl.enable_vertex_attrib_array(1)
 
 gl.bind_buffer(gl.ARRAY_BUFFER, 0)
 gl.bind_vertex_array(0)
 
 -- Enable depth testing
 gl.enable(gl.DEPTH_TEST)
-gl.depth_func(gl.LESS)
 
 -- Get MVP uniform location
 local mvp_loc = gl.get_uniform_location(shader_program, "mvp")
@@ -141,6 +141,7 @@ end
 -- Main loop
 local running = true
 local angle = 0.0
+local anglez = 0.0
 while running do
     -- Poll events
     local events = sdl.poll_events()
@@ -148,22 +149,23 @@ while running do
         if event.type == sdl.SDL_EVENT_QUIT then
             running = false
         elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
-            print("Resize to:", event.width, event.height)
             gl.viewport(0, 0, event.width, event.height)
         end
     end
 
     -- Update rotation
     angle = angle + 0.01
+    anglez = anglez + 0.01
 
-    -- Compute MVP matrix
-    local mvp = gl.dummy_rotate(angle)
-
-    -- Debug: Print MVP matrix in Lua
-    print("Lua MVP matrix:")
-    for i, v in ipairs(mvp) do
-        print(string.format("mvp[%d] = %f", i, v))
-    end
+    -- Set up matrices
+    local model = cglm.mat4_identity()
+    model = cglm.rotate_y(model, angle)
+    model = cglm.rotate_z(model, anglez)
+    local view = cglm.mat4_identity()
+    view = cglm.translate(view, {0.0, 0.0, -3.0})
+    local proj = cglm.perspective(cglm.to_radians(45.0), 800.0 / 600.0, 0.1, 100.0)
+    local temp = cglm.mat4_mul(view, model)
+    local mvp = cglm.mat4_mul(proj, temp)
 
     -- Clear screen
     gl.clear_color(0.2, 0.3, 0.3, 1.0)
