@@ -347,3 +347,82 @@ endif()
 #         -static                                         # Avoid full static linking to prevent issues with system libraries
 #     )
 # endif()
+
+
+
+
+
+
+# set(APP_cube cube3d)
+# add_executable(${APP_cube}
+#     glad/src/gl.c
+#     # examples/c/sdl3_cube3d.c
+#     examples/c/sdl3_check_gl_attribute.c
+# )
+# target_link_libraries(${APP_cube} PUBLIC 
+#     SDL3::SDL3                                          # sdl 3
+#     cglm                                                # cglm
+# )
+# target_include_directories(${APP_cube} PUBLIC
+#     ${CMAKE_SOURCE_DIR}/glad/include                    # glad 2.0
+#     ${stb_SOURCE_DIR}                                   # stb
+#     ${cglm_SOURCE_DIR}/include                          # cglm
+#     ${SDL3_SOURCE_DIR}/include                          # SDL 3.2.22
+# )
+# # Platform-specific settings for Windows (MinGW/MSYS2)
+# if (WIN32)
+#     # Link necessary Windows libraries for raylib
+#     target_link_libraries(${APP_cube} PRIVATE
+#         opengl32                                        # opengl
+#         gdi32                                           # Windows Graphics Device Interface
+#         winmm                                           # Windows Multimedia API 
+#         ws2_32                                          # Winsock 2
+#     )
+#     # Static linking for libgcc and libstdc++
+#     target_link_options(${APP_cube} PRIVATE
+#         -static-libgcc                                  # GNU Compiler Collection
+#         -static-libstdc++                               # Uncomment if C++ code is used # need for imgui
+#         -static                                         # Avoid full static linking to prevent issues with system libraries
+#     )
+# endif()
+
+
+
+set(APP_cube3d sdl3_cube3d)
+add_executable(${APP_cube3d}
+    glad/src/gl.c
+    cube3d/src/main.c
+    cube3d/src/module_sdl.c
+    cube3d/src/module_gl.c
+    cube3d/src/module_cglm.c
+    cube3d/src/module_lua.c
+)
+target_link_libraries(${APP_cube3d} PUBLIC 
+    SDL3::SDL3                                          # sdl 3
+    cglm                                                # cglm
+    lua
+)
+target_include_directories(${APP_cube3d} PUBLIC
+    cube3d/include
+    ${CMAKE_SOURCE_DIR}/glad/include                    # glad 2.0
+    ${stb_SOURCE_DIR}                                   # stb
+    ${cglm_SOURCE_DIR}/include                          # cglm
+    ${SDL3_SOURCE_DIR}/include                          # SDL 3.2.22
+    ${lua_SOURCE_DIR}/include                   # lua
+)
+# Platform-specific settings for Windows (MinGW/MSYS2)
+if (WIN32)
+    # Link necessary Windows libraries for raylib
+    target_link_libraries(${APP_cube3d} PRIVATE
+        opengl32                                        # opengl
+        gdi32                                           # Windows Graphics Device Interface
+        winmm                                           # Windows Multimedia API 
+        ws2_32                                          # Winsock 2
+    )
+    # Static linking for libgcc and libstdc++
+    target_link_options(${APP_cube3d} PRIVATE
+        -static-libgcc                                  # GNU Compiler Collection
+        -static-libstdc++                               # Uncomment if C++ code is used # need for imgui
+        -static                                         # Avoid full static linking to prevent issues with system libraries
+    )
+endif()
