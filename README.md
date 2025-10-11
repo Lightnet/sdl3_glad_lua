@@ -50,19 +50,18 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
 - need to work on doc.
 
 # Lua Features:
-- [x] cimgui simple
+- [x] cimgui
 - [x] opengl glad 2.0
 - [x] sdl 3.2
-    - bugs doublebuffer not working to set and get zero.
 - [x] lua 5.4
 - [x] gl load image 2d
 - [x] gl load font 2d (wip)
-    - misconfig setup.
+    - off set not config correctly
 - [x] shaders
 - [x] triangle 2D
 - [x] cube 3D
 - [x] cglm 0.9.6
-- [ ] network
+- [ ] enet (network)
 - [ ] ...
 
 # Examples:
@@ -85,18 +84,18 @@ if not success then
     return
 end
 
--- Create an SDL window with OpenGL support
-success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
-if not success then
-    print("Window creation failed: " .. err)
+-- Create window with OpenGL and resizable flags
+local window, err = sdl.init_window("sdl3 lua", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+if not window then
+    lua_util.log("Failed to create window: " .. err)
     sdl.quit()
     return
 end
 
--- Initialize OpenGL context
-success, err = gl.init()
+-- Initialize OpenGL
+local success, gl_context, err = gl.init(window)
 if not success then
-    print("OpenGL init failed: " .. err)
+    lua_util.log("Failed to initialize OpenGL: " .. err)
     sdl.quit()
     return
 end
@@ -109,7 +108,8 @@ if not gl_context then
 end
 
 -- Initialize ImGui with sdl_window and gl_context
-success, err = imgui.init(_G.sdl_window, gl_context)
+-- success, err = imgui.init(_G.sdl_window, gl_context)
+success, err = imgui.init(window, gl_context)
 if not success then
     print("ImGui init failed: " .. err)
     gl.destroy()
@@ -152,8 +152,8 @@ while running do
     -- Render ImGui
     imgui.render_draw_data() -- draw gl imgui 
 
-    -- Swap buffers
-    gl.swap_buffers()
+    -- Swap window
+    sdl.gl_swap_window(window)
 end
 
 -- Cleanup

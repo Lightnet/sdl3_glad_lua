@@ -1,5 +1,5 @@
--- main.lua
-
+-- sdl_gl_image.lua
+-- upside down letters
 local sdl = require("module_sdl")
 local gl = require("module_gl")
 local stb = require("module_stb")
@@ -15,15 +15,15 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
-if not success then
+local window, err = sdl.init_window("sdl3 image", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
     return
 end
 
 -- Initialize OpenGL
-success, err = gl.init()
+local success, gl_context, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
     sdl.quit()
@@ -265,64 +265,51 @@ while running do
     -- Generate text vertices
     local vertices = {}
     local x = 400
-    local y = 600 - 128 - 50 -- Below image quad, adjusted
-    local baseline = y -- Store baseline for normalization
+    local y = 600 - 128 - 32 - 50 -- Below image quad
     for i = 1, #text do
         local char = string.byte(text, i)
         local x0, y0, x1, y1, s0, t0, s1, t1, x_advance = stb.get_baked_quad(cdata, bitmap_width, bitmap_height, char, x, y)
         if x0 then
-            -- Normalize y0, y1 to baseline
-            local height = y1 - y0
-            y0 = baseline - height -- Align bottom to baseline
-            y1 = baseline
-            -- Flip texture coordinates in Y to correct orientation
-            local t0_flipped = t1
-            local t1_flipped = t0
             -- Triangle 1
             vertices[#vertices + 1] = x0
             vertices[#vertices + 1] = y0
             vertices[#vertices + 1] = s0
-            vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = t0
             vertices[#vertices + 1] = x1
             vertices[#vertices + 1] = y0
             vertices[#vertices + 1] = s1
-            vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = t0
             vertices[#vertices + 1] = x1
             vertices[#vertices + 1] = y1
             vertices[#vertices + 1] = s1
-            vertices[#vertices + 1] = t1_flipped
+            vertices[#vertices + 1] = t1
             -- Triangle 2
             vertices[#vertices + 1] = x0
             vertices[#vertices + 1] = y0
             vertices[#vertices + 1] = s0
-            vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = t0
             vertices[#vertices + 1] = x1
             vertices[#vertices + 1] = y1
             vertices[#vertices + 1] = s1
-            vertices[#vertices + 1] = t1_flipped
+            vertices[#vertices + 1] = t1
             vertices[#vertices + 1] = x0
             vertices[#vertices + 1] = y1
             vertices[#vertices + 1] = s0
-            vertices[#vertices + 1] = t1_flipped
+            vertices[#vertices + 1] = t1
             x = x + x_advance
-            lua_util.log(string.format("Char %d: x0=%.2f, y0=%.2f, x1=%.2f, y1=%.2f, s0=%.2f, t0=%.2f, s1=%.2f, t1=%.2f, x_advance=%.2f", char, x0, y0, x1, y1, s0, t0, s1, t1, x_advance))
-        else
-            lua_util.log("Failed to get quad for char " .. char .. ": " .. err)
         end
     end
     local text_vertexData = ""
     for _, v in ipairs(vertices) do
         text_vertexData = text_vertexData .. string.pack("f", v)
     end
-    lua_util.log("Text vertices: " .. #vertices)
-    lua_util.log("Final text position: x=" .. x .. ", y=" .. y)
 
     -- Render
     gl.clear_color(0.2, 0.3, 0.3, 1.0)
-    gl.clear()
+    gl.clear(gl.COLOR_BUFFER_BIT)
 
     gl.use_program(shaderProgram)
-    gl.uniform_matrix4fv(projection_loc, 1, false, projection)
+    gl.uniform_matrix4fv(projection_loc, 1, gl.FALSE, projection)
 
     -- Draw image quad
     gl.uniform1f(isText_loc, 0.0)
@@ -332,7 +319,7 @@ while running do
     gl.bind_texture(gl.TEXTURE_2D, image_texture)
     gl.bind_vertex_array(image_vao)
     gl.draw_elements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0)
-    lua_util.log("Drew image quad")
+    -- lua_util.log("Drew image quad")
 
     -- Draw text quads
     if #vertices > 0 then
@@ -345,7 +332,7 @@ while running do
         gl.bind_buffer(gl.ARRAY_BUFFER, text_vbo)
         gl.buffer_data(gl.ARRAY_BUFFER, text_vertexData, #text_vertexData, gl.DYNAMIC_DRAW)
         gl.draw_arrays(gl.TRIANGLES, 0, #vertices / 4)
-        lua_util.log("Drew text quads")
+        -- lua_util.log("Drew text quads")
     end
 
     -- Check for OpenGL errors
@@ -354,7 +341,8 @@ while running do
         lua_util.log("OpenGL error: " .. err)
     end
 
-    gl.swap_buffers()
+    -- Swap window
+    sdl.gl_swap_window(window)
 end
 
 -- Cleanup

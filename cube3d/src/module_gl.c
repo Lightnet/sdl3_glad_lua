@@ -432,27 +432,6 @@ static int gl_get_integer(lua_State *L) {
     return 1;
 }
 
-// Lua: gl.cull_face(enable, mode) -> bool, err_msg
-static int gl_cull_face(lua_State *L) {
-    GLboolean enable = (GLboolean)lua_toboolean(L, 1);
-    GLenum mode = (GLenum)luaL_optinteger(L, 2, GL_BACK);
-    if (enable) {
-        glEnable(GL_CULL_FACE);
-        glCullFace(mode);
-    } else {
-        glDisable(GL_CULL_FACE);
-    }
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) {
-        lua_pushboolean(L, 0);
-        lua_pushfstring(L, "OpenGL error in gl_cull_face: %d", err);
-        return 2;
-    }
-    lua_pushboolean(L, 1);
-    return 1;
-}
-
-
 // Lua: gl.dummy_rotate(angle) -> matrix
 static int gl_dummy_rotate(lua_State *L) {
     float angle = (float)luaL_checknumber(L, 1);
@@ -657,6 +636,34 @@ static int gl_dummy_uniform_mvp(lua_State *L) {
 }
 
 
+// Lua: gl.disable(cap) -> bool, err_msg
+static int gl_disable(lua_State *L) {
+    GLenum cap = (GLenum)luaL_checkinteger(L, 1); // Expect GLenum like GL_CULL_FACE
+    glDisable(cap);
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        lua_pushboolean(L, 0);
+        lua_pushfstring(L, "OpenGL error in gl_disable: %d", err);
+        return 2;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+// Lua: gl.cull_face(mode) -> bool, err_msg
+static int gl_cull_face(lua_State *L) {
+    GLenum mode = (GLenum)luaL_checkinteger(L, 1); // Expect GLenum like GL_FALSE
+    glCullFace(mode);
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        lua_pushboolean(L, 0);
+        lua_pushfstring(L, "OpenGL error in gl_cull_face: %d", err);
+        return 2;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
 // Register GL constants
 static void push_gl_constants(lua_State *L) {
     lua_pushinteger(L, GL_VERSION);
@@ -737,6 +744,7 @@ static const struct luaL_Reg gl_lib[] = {
     {"clear_color", gl_clear_color},
     {"clear", gl_clear},
     {"draw_elements", gl_draw_elements},
+    {"disable", gl_disable}, 
     {"delete_vertex_arrays", gl_delete_vertex_arrays},
     {"delete_buffers", gl_delete_buffers},
     {"delete_program", gl_delete_program},

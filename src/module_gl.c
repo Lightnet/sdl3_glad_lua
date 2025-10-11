@@ -8,6 +8,17 @@
 // Static variable to store the OpenGL context
 static SDL_GLContext g_gl_context = NULL;
 
+// Helper to check OpenGL errors and push to Lua
+static int push_gl_error(lua_State *L, const char *context) {
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "OpenGL error at %s: %d", context, err);
+        return 2;
+    }
+    return 0;
+}
+
 // Helper: Get window from Lua argument
 static SDL_Window *get_sdl_window(lua_State *L) {
     if (!lua_islightuserdata(L, 1)) {
@@ -348,20 +359,20 @@ static int gl_uniform_matrix4fv(lua_State *L) {
     if (luaL_testudata(L, 4, "cglm.mat4")) {
         mat4 *matrix = check_mat4(L, 4);
         glUniformMatrix4fv(location, count, transpose, (const GLfloat *)(*matrix));
-        printf("Using cglm.mat4: [0][0]=%f, [1][1]=%f, [3][0]=%f, [3][1]=%f\n",
-               (*matrix)[0][0], (*matrix)[1][1], (*matrix)[3][0], (*matrix)[3][1]);
+        // printf("Using cglm.mat4: [0][0]=%f, [1][1]=%f, [3][0]=%f, [3][1]=%f\n",
+        //        (*matrix)[0][0], (*matrix)[1][1], (*matrix)[3][0], (*matrix)[3][1]);
     } else {
         // Fallback to string-based version with logging
         const char *matrix = luaL_checkstring(L, 4);
         size_t len = lua_rawlen(L, 4);
-        printf("String-based matrix: length=%zu bytes\n", len);
+        // printf("String-based matrix: length=%zu bytes\n", len);
         if (len != 64) {
-            printf("Warning: Expected 64 bytes (16 floats), got %zu\n", len);
+            // printf("Warning: Expected 64 bytes (16 floats), got %zu\n", len);
         } else {
             const GLfloat *float_matrix = (const GLfloat *)matrix;
-            printf("Matrix values: [0]=%f, [1]=%f, [5]=%f, [12]=%f, [13]=%f, [15]=%f\n",
-                   float_matrix[0], float_matrix[1], float_matrix[5],
-                   float_matrix[12], float_matrix[13], float_matrix[15]);
+            // printf("Matrix values: [0]=%f, [1]=%f, [5]=%f, [12]=%f, [13]=%f, [15]=%f\n",
+            //        float_matrix[0], float_matrix[1], float_matrix[5],
+            //        float_matrix[12], float_matrix[13], float_matrix[15]);
         }
         glUniformMatrix4fv(location, count, transpose, (const GLfloat *)matrix);
     }
@@ -512,6 +523,43 @@ static int gl_uniform1f(lua_State *L) {
     return 0;
 }
 
+// Lua: gl.disable(cap) -> bool, err_msg
+static int gl_disable(lua_State *L) {
+    GLenum cap = (GLenum)luaL_checkinteger(L, 1); // Expect GLenum like GL_CULL_FACE
+    glDisable(cap);
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        lua_pushboolean(L, 0);
+        lua_pushfstring(L, "OpenGL error in gl_disable: %d", err);
+        return 2;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+// Lua: gl.cull_face(mode) -> bool, err_msg
+static int gl_cull_face(lua_State *L) {
+    GLenum mode = (GLenum)luaL_checkinteger(L, 1); // Expect GLenum like GL_FALSE
+    glCullFace(mode);
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        lua_pushboolean(L, 0);
+        lua_pushfstring(L, "OpenGL error in gl_cull_face: %d", err);
+        return 2;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
+}
+
+// Lua: gl.polygon_mode(face, mode)
+static int gl_polygon_mode(lua_State *L) {
+    GLenum face = (GLenum)luaL_checkinteger(L, 1);
+    GLenum mode = (GLenum)luaL_checkinteger(L, 2);
+    glPolygonMode(face, mode);
+    return push_gl_error(L, "glPolygonMode");
+}
+
+
 static const struct luaL_Reg gl_lib[] = {
     {"init", gl_init},
     {"destroy", gl_destroy},
@@ -551,6 +599,7 @@ static const struct luaL_Reg gl_lib[] = {
     {"uniform1f", gl_uniform1f},
     {"uniform4f", gl_uniform4f},
     {"enable", gl_enable},
+    {"disable", gl_disable},     // gl.disable
     {"get_error", gl_get_error},
     {"blend_func", gl_blend_func},
     {"dummy_uniform_matrix4fv", gl_dummy_uniform_matrix4fv},
@@ -558,6 +607,9 @@ static const struct luaL_Reg gl_lib[] = {
     {"delete_buffers", gl_delete_buffers},
 
     {"delete_vertex_arrays", gl_delete_vertex_arrays},
+    {"cull_face", gl_cull_face}, // This is the new gl_cull_face
+
+    {"polygon_mode", gl_polygon_mode},
 
     
     {NULL, NULL}
@@ -569,6 +621,9 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushnil(L);
     lua_setfield(L, -2, "gl_context");
     // Add constants
+    lua_pushinteger(L, GL_VERSION); lua_setfield(L, -2, "VERSION");
+
+
     lua_pushinteger(L, GL_VERTEX_SHADER); lua_setfield(L, -2, "VERTEX_SHADER");
     lua_pushinteger(L, GL_FRAGMENT_SHADER); lua_setfield(L, -2, "FRAGMENT_SHADER");
     lua_pushinteger(L, GL_ARRAY_BUFFER); lua_setfield(L, -2, "ARRAY_BUFFER");
@@ -606,6 +661,13 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_DYNAMIC_DRAW); lua_setfield(L, -2, "DYNAMIC_DRAW");
 
     lua_pushinteger(L, GL_DEPTH_TEST); lua_setfield(L, -2, "DEPTH_TEST");
+
+    lua_pushinteger(L, GL_CULL_FACE); lua_setfield(L, -2, "CULL_FACE");
+    lua_pushinteger(L, GL_BACK); lua_setfield(L, -2, "BACK");
+    lua_pushinteger(L, GL_FRONT_AND_BACK); lua_setfield(L, -2, "FRONT_AND_BACK");
+    lua_pushinteger(L, GL_LINE); lua_setfield(L, -2, "LINE");
+    lua_pushinteger(L, GL_LESS); lua_setfield(L, -2, "LESS");
+    lua_pushinteger(L, GL_FRONT); lua_setfield(L, -2, "FRONT");
 
     return 1;
 }

@@ -11,18 +11,18 @@ if not success then
     return
 end
 
--- Create an SDL window with OpenGL support
-success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
-if not success then
-    print("Window creation failed: " .. err)
+-- Create window with OpenGL and resizable flags
+local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+if not window then
+    lua_util.log("Failed to create window: " .. err)
     sdl.quit()
     return
 end
 
--- Initialize OpenGL context
-success, err = gl.init()
+-- Initialize OpenGL
+local success, gl_context, err = gl.init(window)
 if not success then
-    print("OpenGL init failed: " .. err)
+    lua_util.log("Failed to initialize OpenGL: " .. err)
     sdl.quit()
     return
 end
@@ -65,7 +65,8 @@ while running do
     gl.clear_color(0.2, 0.3, 0.3, 1.0)  -- Dark teal
     gl.viewport(0, 0, 800, 600)
     gl.clear()
-    gl.swap_buffers()
+
+    sdl.gl_swap_window(window)
 
     -- -- ~60 FPS delay
     -- local start_time = os.clock()

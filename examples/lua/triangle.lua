@@ -17,15 +17,15 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
-if not success then
+local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
     return
 end
 
 -- Initialize OpenGL
-success, err = gl.init()
+local success, gl_context, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
     sdl.quit()
@@ -142,13 +142,14 @@ while running do
 
     -- Render
     gl.clear_color(0.2, 0.3, 0.3, 1.0)
-    gl.clear()
+    gl.clear(gl.COLOR_BUFFER_BIT)
 
     gl.use_program(shaderProgram)
     gl.bind_vertex_array(vao)
     gl.draw_arrays(gl.TRIANGLES, 0, 3)
 
-    gl.swap_buffers()
+    -- Swap window
+    sdl.gl_swap_window(window)
 end
 
 -- Cleanup

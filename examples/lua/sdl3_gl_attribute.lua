@@ -22,23 +22,25 @@ end
 -- print("GL_DOUBLEBUFFER 2:" .. tostring(GL_DOUBLEBUFFER))
 
 -- Create window with OpenGL and resizable flags
-success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
-if not success then
+local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
     return
 end
+
 --does not work here 
 -- GL_DOUBLEBUFFER = sdl.gl_get_attribute(sdl.GL_DOUBLEBUFFER)
 -- print("GL_DOUBLEBUFFER 3:" .. tostring(GL_DOUBLEBUFFER))
 
 -- Initialize OpenGL
-success, err = gl.init()
+local success, gl_context, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
     sdl.quit()
     return
 end
+
 -- work work here 
 -- note there is c gl set in module_sdl.c
 GL_DOUBLEBUFFER = sdl.gl_get_attribute(sdl.GL_DOUBLEBUFFER)

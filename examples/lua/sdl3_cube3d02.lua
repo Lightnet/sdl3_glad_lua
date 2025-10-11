@@ -12,15 +12,15 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
-if not success then
+local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
     return
 end
 
 -- Initialize OpenGL
-success, err = gl.init()
+local success, gl_context, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
     sdl.quit()
@@ -183,7 +183,7 @@ while running do
     -- Update rotation (mimic C code's Y and Z rotations)
     angle_y = angle_y + 0.01
     angle_z = angle_z + 0.01
-    print("angle_y: " .. angle_y .. ", angle_z: " .. angle_z)
+    -- print("angle_y: " .. angle_y .. ", angle_z: " .. angle_z)
     model = cglm.mat4_identity()
     model = cglm.rotate(model, angle_y, cglm.vec3(0, 1, 0)) -- Rotate around Y-axis
     model = cglm.rotate(model, angle_z, cglm.vec3(0, 0, 1)) -- Rotate around Z-axis
@@ -209,7 +209,7 @@ while running do
         lua_util.log("OpenGL error: " .. err_code)
     end
 
-    gl.swap_buffers()
+    sdl.gl_swap_window(window)
 end
 
 -- Cleanup

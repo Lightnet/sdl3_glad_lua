@@ -320,18 +320,18 @@ static int mat4_mul(lua_State *L) {
     mat4 *b = check_mat4(L, 2);
     mat4 result;
     glm_mat4_mul(*a, *b, result); // A * B
-    printf("mat4_mul input A:\n");
-    for (int i = 0; i < 4; i++) {
-        printf("  [%d]: %f, %f, %f, %f\n", i, (*a)[i][0], (*a)[i][1], (*a)[i][2], (*a)[i][3]);
-    }
-    printf("mat4_mul input B:\n");
-    for (int i = 0; i < 4; i++) {
-        printf("  [%d]: %f, %f, %f, %f\n", i, (*b)[i][0], (*b)[i][1], (*b)[i][2], (*b)[i][3]);
-    }
-    printf("mat4_mul result (A * B):\n");
-    for (int i = 0; i < 4; i++) {
-        printf("  [%d]: %f, %f, %f, %f\n", i, result[i][0], result[i][1], result[i][2], result[i][3]);
-    }
+    // printf("mat4_mul input A:\n");
+    // for (int i = 0; i < 4; i++) {
+    //     printf("  [%d]: %f, %f, %f, %f\n", i, (*a)[i][0], (*a)[i][1], (*a)[i][2], (*a)[i][3]);
+    // }
+    // printf("mat4_mul input B:\n");
+    // for (int i = 0; i < 4; i++) {
+    //     printf("  [%d]: %f, %f, %f, %f\n", i, (*b)[i][0], (*b)[i][1], (*b)[i][2], (*b)[i][3]);
+    // }
+    // printf("mat4_mul result (A * B):\n");
+    // for (int i = 0; i < 4; i++) {
+    //     printf("  [%d]: %f, %f, %f, %f\n", i, result[i][0], result[i][1], result[i][2], result[i][3]);
+    // }
     push_mat4(L, result);
     return 1;
 }

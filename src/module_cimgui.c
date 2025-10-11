@@ -17,10 +17,10 @@ static SDL_Window *get_sdl_window(lua_State *L) {
 }
 
 // Lua: imgui.init(window, gl_context) -> bool, err_msg (unchanged)
+// Lua: imgui.init(window, gl_context) -> bool, err_msg
 static int imgui_init(lua_State *L) {
     SDL_Window *window = (SDL_Window *)lua_topointer(L, 1);  // Arg 1: window userdata
-    void *gl_context_ptr = (void *)lua_topointer(L, 2);  // Arg 2: gl_context userdata
-    SDL_GLContext gl_context = (SDL_GLContext)gl_context_ptr;
+    SDL_GLContext gl_context = (SDL_GLContext)lua_topointer(L, 2);  // Arg 2: gl_context userdata
 
     if (!window || !gl_context) {
         lua_pushboolean(L, 0);
@@ -30,14 +30,14 @@ static int imgui_init(lua_State *L) {
 
     // Setup Dear ImGui context
     igCreateContext(NULL);
-    ImGuiIO *io = igGetIO();
+    ImGuiIO *io = igGetIO();  // No workaround needed unless specific issues arise
     io->ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io->ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
 
     // Setup Dear ImGui style
     igStyleColorsDark(NULL);
     ImGuiStyle *style = igGetStyle();
-    float main_scale = 1.0f;  // Default; pass from Lua if needed
+    float main_scale = 1.0f;  // Default; could be passed from Lua if needed
     ImGuiStyle_ScaleAllSizes(style, main_scale);
 
     // Setup Platform/Renderer backends
@@ -47,7 +47,7 @@ static int imgui_init(lua_State *L) {
         igDestroyContext(NULL);
         return 2;
     }
-    if (!ImGui_ImplOpenGL3_Init("#version 330")) {
+    if (!ImGui_ImplOpenGL3_Init("#version 330 core")) {  // Specify core profile explicitly
         lua_pushboolean(L, 0);
         lua_pushstring(L, "OpenGL3 backend init failed");
         ImGui_ImplSDL3_Shutdown();
@@ -129,6 +129,13 @@ static int imgui_ig_end(lua_State *L) {
     return 0;
 }
 
+// Lua: imgui.should_close() -> bool
+static int imgui_should_close(lua_State *L) {
+    ImGuiIO *io = igGetIO();
+    lua_pushboolean(L, io->WantCaptureMouse || io->WantCaptureKeyboard);
+    return 1;
+}
+
 static const struct luaL_Reg imgui_lib[] = {
     {"init", imgui_init},
     {"new_frame", imgui_new_frame},
@@ -139,7 +146,8 @@ static const struct luaL_Reg imgui_lib[] = {
     {"ig_begin", imgui_ig_begin},
     {"ig_text", imgui_ig_text},
     {"ig_button", imgui_ig_button},
-    {"ig_end", imgui_ig_end},  // New
+    {"ig_end", imgui_ig_end},
+    {"should_close", imgui_should_close},  // New: Check if ImGui wants input
     {NULL, NULL}
 };
 

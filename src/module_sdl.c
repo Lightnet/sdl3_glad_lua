@@ -82,7 +82,6 @@ static int sdl_init(lua_State *L) {
     return 1;
 }
 
-
 // Lua: sdl.init_window(title, width, height, flags) -> window, err_msg
 static int sdl_init_window(lua_State *L) {
     const char *title = luaL_checkstring(L, 1);
@@ -133,7 +132,6 @@ static int sdl_init_window(lua_State *L) {
     lua_pushlightuserdata(L, window);
     return 1;
 }
-
 
 // Lua: sdl.poll_events() -> table of events
 static int sdl_poll_events(lua_State *L) {

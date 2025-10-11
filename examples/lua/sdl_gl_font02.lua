@@ -1,4 +1,4 @@
--- examples/lua/sdl_gl_font.lua
+-- main.lua (or sdl_gl_image05.lua)
 
 local sdl = require("module_sdl")
 local gl = require("module_gl")
@@ -15,15 +15,15 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-success, err = sdl.init_window(800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
-if not success then
+local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
     return
 end
 
 -- Initialize OpenGL
-success, err = gl.init()
+local success, gl_context, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
     sdl.quit()
@@ -33,7 +33,6 @@ end
 -- Enable blending
 gl.enable(gl.BLEND)
 gl.blend_func(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-lua_util.log("Blending enabled: SRC_ALPHA, ONE_MINUS_SRC_ALPHA")
 
 -- Load image
 local image_data, width, height, channels, err = stb.load_image("resources/ph16.png")
@@ -48,7 +47,6 @@ lua_util.log("Image loaded: " .. width .. "x" .. height .. ", channels: " .. cha
 -- Create and set up image texture
 local image_texture = gl.gen_textures()
 gl.bind_texture(gl.TEXTURE_2D, image_texture)
-lua_util.log("Bound image texture: " .. image_texture)
 gl.tex_parameter_i(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 gl.tex_parameter_i(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
 local format = channels == 4 and gl.RGBA or gl.RGB
@@ -65,24 +63,23 @@ if not font_data then
 end
 lua_util.log("Font loaded, size: " .. font_size)
 
--- Render text to bitmap
-local text_bitmap, text_width, text_height, text_channels, err = stb.render_text(font_data, 32, "Hello, World!", 1024, 1024)
-if not text_bitmap then
-    lua_util.log("Failed to render text: " .. (err or "Unknown error"))
+-- Bake font
+local bitmap, cdata, bitmap_width, bitmap_height, err = stb.bake_font(font_data, 32, 512, 512)
+if not bitmap then
+    lua_util.log("Failed to bake font: " .. err)
     gl.destroy()
     sdl.quit()
     return
 end
-lua_util.log("Text rendered: " .. text_width .. "x" .. text_height .. ", channels: " .. text_channels)
+lua_util.log("Font baked: " .. bitmap_width .. "x" .. bitmap_height)
 
 -- Create and set up text texture
 local text_texture = gl.gen_textures()
 gl.bind_texture(gl.TEXTURE_2D, text_texture)
-lua_util.log("Bound text texture: " .. text_texture)
 gl.tex_parameter_i(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 gl.tex_parameter_i(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-gl.tex_image_2d(gl.TEXTURE_2D, 0, gl.ALPHA, text_width, text_height, 0, gl.ALPHA, gl.UNSIGNED_BYTE, text_bitmap)
-stb.free_bitmap(text_bitmap)
+gl.tex_image_2d(gl.TEXTURE_2D, 0, gl.RED, bitmap_width, bitmap_height, 0, gl.RED, gl.UNSIGNED_BYTE, bitmap)
+stb.free_bitmap(bitmap)
 
 -- Vertex Shader
 local vertexShaderSource = [[
@@ -97,18 +94,20 @@ void main() {
 }
 ]]
 
--- Fragment Shader (Red test for text quad)
+-- Fragment Shader
 local fragmentShaderSource = [[
 #version 330 core
 in vec2 TexCoord;
 out vec4 FragColor;
 uniform sampler2D texture1;
 uniform float isText;
+uniform vec4 textColor;
 void main() {
     if (isText > 0.5) {
-        FragColor = vec4(1.0, 0.0, 0.0, 1.0); // Solid red for text quad
+        float alpha = texture(texture1, TexCoord).r;
+        FragColor = vec4(textColor.rgb, alpha * textColor.a);
     } else {
-        FragColor = texture(texture1, TexCoord); // Image texture
+        FragColor = texture(texture1, TexCoord);
     }
 }
 ]]
@@ -170,6 +169,13 @@ if isText_loc < 0 then
     sdl.quit()
     return
 end
+local textColor_loc = gl.get_uniform_location(shaderProgram, "textColor")
+if textColor_loc < 0 then
+    lua_util.log("Failed to get textColor uniform location")
+    gl.destroy()
+    sdl.quit()
+    return
+end
 
 -- Vertex data for image quad (128x128 centered)
 local half_width = 128 / 2
@@ -187,26 +193,10 @@ local indices = {
     2, 3, 0  -- Second triangle
 }
 
--- Vertex data for text quad (below image)
-local text_half_width = text_width / 2
-local text_half_height = text_height / 2
-local text_center_y = center_y - half_height - text_half_height - 100
-local text_vertices = {
-    center_x - text_half_width, text_center_y - text_half_height, 0.0, 0.0, -- Bottom-left
-    center_x + text_half_width, text_center_y - text_half_height, 1.0, 0.0, -- Bottom-right
-    center_x + text_half_width, text_center_y + text_half_height, 1.0, 1.0, -- Top-right
-    center_x - text_half_width, text_center_y + text_half_height, 0.0, 1.0  -- Top-left
-}
-lua_util.log("Text quad: width=" .. text_width .. ", height=" .. text_height .. ", center_y=" .. text_center_y)
-
--- Convert vertices to binary strings
+-- Convert image vertices to binary string
 local image_vertexData = ""
 for _, v in ipairs(image_vertices) do
     image_vertexData = image_vertexData .. string.pack("f", v)
-end
-local text_vertexData = ""
-for _, v in ipairs(text_vertices) do
-    text_vertexData = text_vertexData .. string.pack("f", v)
 end
 local indexData = ""
 for _, i in ipairs(indices) do
@@ -227,17 +217,16 @@ gl.enable_vertex_attrib_array(0)
 gl.vertex_attrib_pointer(1, 2, gl.FLOAT, false, 4 * 4, 2 * 4)
 gl.enable_vertex_attrib_array(1)
 
--- Set up VAO, VBO for text
+-- Set up VAO, VBO for text (dynamic)
 local text_vao = gl.gen_vertex_arrays()
 gl.bind_vertex_array(text_vao)
 local text_vbo = gl.gen_buffers()
 gl.bind_buffer(gl.ARRAY_BUFFER, text_vbo)
-gl.buffer_data(gl.ARRAY_BUFFER, text_vertexData, #text_vertexData, gl.STATIC_DRAW)
-gl.bind_buffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
 gl.vertex_attrib_pointer(0, 2, gl.FLOAT, false, 4 * 4, 0)
 gl.enable_vertex_attrib_array(0)
 gl.vertex_attrib_pointer(1, 2, gl.FLOAT, false, 4 * 4, 2 * 4)
 gl.enable_vertex_attrib_array(1)
+gl.bind_buffer(gl.ELEMENT_ARRAY_BUFFER, ebo)
 
 -- Set initial viewport
 gl.viewport(0, 0, 800, 600)
@@ -253,6 +242,7 @@ end
 
 -- Main loop
 local running = true
+local text = "Hello, World!"
 while running do
     -- Handle events
     local events = sdl.poll_events()
@@ -272,32 +262,85 @@ while running do
         end
     end
 
+    -- Generate text vertices
+    local vertices = {}
+    local x = 400
+    local y = 600 - 128 - 32 - 50 -- Below image quad
+    for i = 1, #text do
+        local char = string.byte(text, i)
+        local x0, y0, x1, y1, s0, t0, s1, t1, x_advance = stb.get_baked_quad(cdata, bitmap_width, bitmap_height, char, x, y)
+        if x0 then
+            -- Flip texture coordinates in Y (t0, t1) to correct upside-down text
+            local t0_flipped = t1
+            local t1_flipped = t0
+            -- Triangle 1
+            vertices[#vertices + 1] = x0
+            vertices[#vertices + 1] = y0
+            vertices[#vertices + 1] = s0
+            vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = x1
+            vertices[#vertices + 1] = y0
+            vertices[#vertices + 1] = s1
+            vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = x1
+            vertices[#vertices + 1] = y1
+            vertices[#vertices + 1] = s1
+            vertices[#vertices + 1] = t1_flipped
+            -- Triangle 2
+            vertices[#vertices + 1] = x0
+            vertices[#vertices + 1] = y0
+            vertices[#vertices + 1] = s0
+            vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = x1
+            vertices[#vertices + 1] = y1
+            vertices[#vertices + 1] = s1
+            vertices[#vertices + 1] = t1_flipped
+            vertices[#vertices + 1] = x0
+            vertices[#vertices + 1] = y1
+            vertices[#vertices + 1] = s0
+            vertices[#vertices + 1] = t1_flipped
+            x = x + x_advance
+            lua_util.log(string.format("Char %d: x0=%.2f, y0=%.2f, x1=%.2f, y1=%.2f, s0=%.2f, t0=%.2f, s1=%.2f, t1=%.2f", char, x0, y0, x1, y1, s0, t0, s1, t1))
+        else
+            lua_util.log("Failed to get quad for char " .. char .. ": " .. err)
+        end
+    end
+    local text_vertexData = ""
+    for _, v in ipairs(vertices) do
+        text_vertexData = text_vertexData .. string.pack("f", v)
+    end
+    lua_util.log("Text vertices: " .. #vertices)
+
     -- Render
     gl.clear_color(0.2, 0.3, 0.3, 1.0)
-    gl.clear()
+    gl.clear(gl.COLOR_BUFFER_BIT)
 
     gl.use_program(shaderProgram)
-    gl.uniform_matrix4fv(projection_loc, 1, false, projection)
+    gl.uniform_matrix4fv(projection_loc, 1, gl.FALSE, projection)
 
     -- Draw image quad
     gl.uniform1f(isText_loc, 0.0)
+    gl.uniform4f(textColor_loc, 1.0, 1.0, 1.0, 1.0)
     gl.uniform1i(texture_loc, 0)
     gl.active_texture(gl.TEXTURE0)
     gl.bind_texture(gl.TEXTURE_2D, image_texture)
-    lua_util.log("Bound image texture: " .. image_texture)
     gl.bind_vertex_array(image_vao)
     gl.draw_elements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0)
-    lua_util.log("Drew image quad")
+    -- lua_util.log("Drew image quad")
 
-    -- Draw text quad
-    gl.uniform1f(isText_loc, 1.0)
-    gl.uniform1i(texture_loc, 1)
-    gl.active_texture(gl.TEXTURE1)
-    gl.bind_texture(gl.TEXTURE_2D, text_texture)
-    lua_util.log("Bound text texture: " .. text_texture)
-    gl.bind_vertex_array(text_vao)
-    gl.draw_elements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0)
-    lua_util.log("Drew text quad")
+    -- Draw text quads
+    if #vertices > 0 then
+        gl.uniform1f(isText_loc, 1.0)
+        gl.uniform4f(textColor_loc, 1.0, 1.0, 1.0, 1.0)
+        gl.uniform1i(texture_loc, 1)
+        gl.active_texture(gl.TEXTURE1)
+        gl.bind_texture(gl.TEXTURE_2D, text_texture)
+        gl.bind_vertex_array(text_vao)
+        gl.bind_buffer(gl.ARRAY_BUFFER, text_vbo)
+        gl.buffer_data(gl.ARRAY_BUFFER, text_vertexData, #text_vertexData, gl.DYNAMIC_DRAW)
+        gl.draw_arrays(gl.TRIANGLES, 0, #vertices / 4)
+        -- lua_util.log("Drew text quads")
+    end
 
     -- Check for OpenGL errors
     local err = gl.get_error()
@@ -305,7 +348,8 @@ while running do
         lua_util.log("OpenGL error: " .. err)
     end
 
-    gl.swap_buffers()
+    -- Swap window
+    sdl.gl_swap_window(window)
 end
 
 -- Cleanup
@@ -315,5 +359,6 @@ gl.delete_program(shaderProgram)
 gl.delete_textures({image_texture, text_texture})
 gl.delete_buffers({image_vbo, text_vbo, ebo})
 gl.delete_vertex_arrays({image_vao, text_vao})
+stb.free_cdata(cdata)
 gl.destroy()
 sdl.quit()
