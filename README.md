@@ -39,10 +39,10 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
 
 ## Pros:
 - easy to test in real time without need to recompile which take time.
-- learn some basic of the lua script and meta table archtech format.
 - work in progress...
 
 ## Cons:
+- learn some basic of the lua script and meta table archtech format.
 - Does not design for large scale due c and lua layer translate.
 - There will be lag between layers for script to c.
 - not able to learn c programing language which required to code correctly. Still this open src you see how code works.
@@ -60,7 +60,18 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
 - [x] shaders
 - [x] triangle 2D
 - [x] cube 3D
-- [x] cglm 0.9.6
+- [ ] cglm 0.9.6
+    - [x] VEC3_TYPE
+    - [x] VEC4_TYPE
+    - [x] MAT4_TYPE
+    - [x] vec3
+    - [x] vec4
+    - [x] ortho
+    - [x] perspective
+    - [x] rotate
+    - [x] translate
+    - [x] mat4_mul
+    - [x] debug_perspective
 - [ ] enet (network)
 - [ ] ...
 
@@ -70,7 +81,7 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
 - triangle.lua
 - sdl3_cimgui.lua
 
-# lua script:
+# Lua script:
 ```lua
 -- Load required modules
 local sdl = require("module_sdl")
@@ -147,7 +158,7 @@ while running do
 
     -- Clear the screen
     gl.clear_color(0.2, 0.3, 0.3, 1.0)
-    gl.clear()
+    gl.clear(gl.COLOR_BUFFER_BIT)
 
     -- Render ImGui
     imgui.render_draw_data() -- draw gl imgui 
@@ -164,11 +175,21 @@ sdl.quit()
   The Grok AI agent keep it simple still need to refine some api to make it easy later.
 
 # Bugs:
-- Note that SDL 3.2.22 basic set up for SDL_GL_DOUBLEBUFFER, SDL_GL_DEPTH_SIZE and other but not for SDL_GL_CONTEXT_MAJOR_VERSION and SDL_GL_CONTEXT_MINOR_VERSION. Unless I config it wrong but check on SDL 2.x which is working on simple test.
+- gl.FALSE required int not bool for c lua
+    - when doing 3D render it would go to flat plane 3D. In c return 1 and not 0.
+- 
 
-# Lua Global Variable:
+# Notes:
+- When using the lua script. There will be delay or lag when it set up opengl.
+- 
+
+# Lua modules:
 ```lua
-local gl = require("module_gl") -- Global to ensure _G.gl is set for gl_init
+local sdl = require("module_sdl")
+local gl = require("module_gl")
+local stb = require("module_stb")
+local lua_util = require("lua_util")
+local cglm = require("module_cglm")
 ```
 
 # Credits:
