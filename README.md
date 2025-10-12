@@ -71,7 +71,8 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
     - [x] translate
     - [x] mat4_mul
     - [x] debug_perspective
-- [ ] enet (network)
+- [x] enet (network)
+    - simple test.
 - [ ] ...
 
 # Examples:

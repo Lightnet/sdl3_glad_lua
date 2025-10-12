@@ -1,4 +1,4 @@
--- module
+-- modules
 local sdl = require("module_sdl")
 local gl = require("module_gl")
 local cglm = require("module_cglm")
