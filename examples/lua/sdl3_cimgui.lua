@@ -5,14 +5,14 @@ local imgui = require("module_imgui")
 local lua_util = require("lua_util") -- Assuming this exists for logging
 
 -- Initialize SDL with video and events subsystems
-local success, err = sdl.init(sdl.SDL_INIT_VIDEO + sdl.SDL_INIT_EVENTS)
+local success, err = sdl.init(sdl.INIT_VIDEO + sdl.INIT_EVENTS)
 if not success then
     print("SDL init failed: " .. err)
     return
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 cimgui", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 cimgui", 800, 600, sdl.WINDOW_OPENGL + sdl.WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
@@ -55,9 +55,9 @@ while running do
     -- Poll SDL events
     local events = sdl.poll_events_ig() -- Use poll_events_ig to process ImGui inputs
     for i, event in ipairs(events) do
-        if event.type == sdl.SDL_EVENT_QUIT then
+        if event.type == sdl.EVENT_QUIT then
             running = false
-        elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
+        elseif event.type == sdl.EVENT_WINDOW_RESIZED then
             gl.viewport(0, 0, event.width, event.height)
         end
     end

@@ -9,7 +9,7 @@ print("gl type:", type(gl))
 print("gl.delete_shader:", type(gl.delete_shader))
 
 -- Initialize SDL video subsystem
-local success, err = sdl.init(sdl.SDL_INIT_VIDEO)
+local success, err = sdl.init(sdl.INIT_VIDEO)
 if not success then
     lua_util.log("Failed to initialize SDL: " .. err)
     sdl.quit()
@@ -17,7 +17,7 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.WINDOW_OPENGL + sdl.WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
@@ -118,9 +118,9 @@ while running do
     -- Handle events
     local events = sdl.poll_events()
     for i, event in ipairs(events) do
-        if event.type == sdl.SDL_EVENT_QUIT then
+        if event.type == sdl.EVENT_QUIT then
             running = false
-        elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
+        elseif event.type == sdl.EVENT_WINDOW_RESIZED then
             print("resize window")
             gl.viewport(0, 0, event.width, event.height)
         end

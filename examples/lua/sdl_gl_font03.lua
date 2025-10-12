@@ -15,7 +15,7 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 font 03", 800, 600, sdl.WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 font 03", 800, 600, sdl.WINDOW_OPENGL + sdl.WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()

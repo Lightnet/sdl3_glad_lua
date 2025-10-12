@@ -172,6 +172,7 @@ while running do
     gl.bind_vertex_array(vao)
     gl.draw_elements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0)
 
+    
     -- Swap window
     sdl.gl_swap_window(window)
 end

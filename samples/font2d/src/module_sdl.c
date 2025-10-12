@@ -26,7 +26,6 @@ static void push_event_constants(lua_State *L) {
     lua_setfield(L, -2, "WINDOW_RESIZABLE");
     lua_pushinteger(L, SDL_WINDOW_HIGH_PIXEL_DENSITY);
     lua_setfield(L, -2, "WINDOW_HIGH_PIXEL_DENSITY"); 
-
     lua_pushinteger(L, SDL_WINDOW_MINIMIZED);
     lua_setfield(L, -2, "WINDOW_MINIMIZED");
 

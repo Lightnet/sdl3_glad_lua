@@ -161,11 +161,17 @@ while not done do
         end
     end
 
-    -- local flags = sdl.get_window_flags(window)
+    local flags = sdl.get_window_flags(window)
+    
     -- if bit32.band(flags, sdl.WINDOW_MINIMIZED) ~= 0 then
     --     sdl.delay(10)
     --     goto continue
     -- end
+
+    if flags & sdl.WINDOW_MINIMIZED ~= 0 then
+        sdl.delay(10)
+        goto continue
+    end
 
     local ww, hh = sdl.get_window_size(window)
     gl.viewport(0, 0, ww, hh)

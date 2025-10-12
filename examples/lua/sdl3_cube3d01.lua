@@ -188,6 +188,8 @@ while running do
     gl.bind_vertex_array(vao)
     gl.draw_elements(gl.TRIANGLES, #indices, gl.UNSIGNED_INT, 0)
 
+    
+    -- swap window
     sdl.gl_swap_window(window)
 end
 

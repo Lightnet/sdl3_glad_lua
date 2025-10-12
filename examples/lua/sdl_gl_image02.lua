@@ -155,9 +155,9 @@ while running do
     -- Handle events
     local events = sdl.poll_events()
     for i, event in ipairs(events) do
-        if event.type == sdl.SDL_EVENT_QUIT then
+        if event.type == sdl.EVENT_QUIT then
             running = false
-        elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
+        elseif event.type == sdl.EVENT_WINDOW_RESIZED then
             lua_util.log("Window resized to " .. event.width .. "x" .. event.height)
             gl.viewport(0, 0, event.width, event.height)
         end

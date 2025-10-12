@@ -25,6 +25,10 @@ static void push_event_constants(lua_State *L) {
     lua_pushinteger(L, SDL_WINDOW_MINIMIZED);
     lua_setfield(L, -2, "WINDOW_MINIMIZED");
 
+    // Window position
+    lua_pushinteger(L, SDL_WINDOWPOS_CENTERED);
+    lua_setfield(L, -2, "WINDOWPOS_CENTERED");
+
     // GL attributes
     lua_pushinteger(L, SDL_GL_RED_SIZE);
     lua_setfield(L, -2, "GL_RED_SIZE");
@@ -383,6 +387,18 @@ static int sdl_delay(lua_State *L) {
     return 0;
 }
 
+// Lua: sdl.get_current_gl_context() -> context
+static int sdl_get_current_gl_context(lua_State *L) {
+    SDL_GLContext context = SDL_GL_GetCurrentContext();
+    if (!context) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushlightuserdata(L, context);
+    return 1;
+}
+
+
 static const struct luaL_Reg sdl_lib[] = {
     {"init", sdl_init},
     {"init_window", sdl_init_window},
@@ -402,6 +418,8 @@ static const struct luaL_Reg sdl_lib[] = {
     {"get_window_size", sdl_get_window_size},
     {"get_window_id", sdl_get_window_id},
     {"delay", sdl_delay},
+
+    {"get_current_gl_context", sdl_get_current_gl_context},
 
     {NULL, NULL}
 };

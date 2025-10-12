@@ -209,6 +209,8 @@ while running do
         lua_util.log("OpenGL error: " .. err_code)
     end
 
+
+    -- swap window
     sdl.gl_swap_window(window)
 end
 
