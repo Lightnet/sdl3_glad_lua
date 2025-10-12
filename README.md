@@ -31,18 +31,17 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
 - Integrated Editor: Use cimgui to build an in-runtime editor for tweaking scenes, UI, and assets directly in Lua – no external tools or recompiles needed.
 - Modularity via Add-ons: Core runtime is minimal; extend with Lua-loaded modules (e.g., physics, audio) without touching C code.
 - Simplicity First: Prioritize readable, concise Lua APIs that feel like "C in Lua" – e.g., direct calls to gl.BindTexture() equivalents – while keeping the host binary under 5MB.
-- Runtime Iteration: Scripts load/execute on-the-fly; hot-reload scenes during playtesting for game dev workflows.
-
-
-# There are good and bad:
-  There are pros and cons to lua script.
+- Runtime Iteration: Scripts load/execute on-the-fly; hot-reload scenes during playtesting for game dev workflows. (not added)
 
 ## Pros:
 - easy to test in real time without need to recompile which take time.
+- using string instead of const strings c.
+- easy to prototype for cimgui still need to add widgets.
+- 
 - work in progress...
 
 ## Cons:
-- learn some basic of the lua script and meta table archtech format.
+- learn some basic of the lua script and meta table architecture format.
 - Does not design for large scale due c and lua layer translate.
 - There will be lag between layers for script to c.
 - not able to learn c programing language which required to code correctly. Still this open src you see how code works.
@@ -81,6 +80,12 @@ This setup draws inspiration from prior Lua-OpenGL bindings but pushes toward fu
 - triangle.lua
 - sdl3_cimgui.lua
 
+# Samples:
+- [ ] cube 3D
+    - Broke Cube
+- [ ] font 2D
+    - load file font
+    - bake font
 # Lua script:
 ```lua
 -- Load required modules
@@ -89,14 +94,14 @@ local gl = require("module_gl")
 local imgui = require("module_imgui")
 
 -- Initialize SDL with video and events subsystems
-local success, err = sdl.init(sdl.SDL_INIT_VIDEO + sdl.SDL_INIT_EVENTS)
+local success, err = sdl.init(sdl.INIT_VIDEO + sdl.INIT_EVENTS)
 if not success then
     print("SDL init failed: " .. err)
     return
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 lua", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 lua", 800, 600, sdl.WINDOW_OPENGL + sdl.WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
@@ -104,22 +109,24 @@ if not window then
 end
 
 -- Initialize OpenGL
-local success, gl_context, err = gl.init(window)
+local gl_context, success, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
+    gl.destroy()
     sdl.quit()
     return
 end
+print("success: " .. tostring(success))
+print("gl_context: " .. tostring(gl_context))
 
 -- Access stored gl context
-local gl_context = gl.get_gl_context()
-if not gl_context then
-    print("Failed to get GL context: ", select(2, gl.get_gl_context()))
-    return
-end
+-- local gl_context = gl.get_gl_context()
+-- if not gl_context then
+--     print("Failed to get GL context: ", select(2, gl.get_gl_context()))
+--     return
+-- end
 
 -- Initialize ImGui with sdl_window and gl_context
--- success, err = imgui.init(_G.sdl_window, gl_context)
 success, err = imgui.init(window, gl_context)
 if not success then
     print("ImGui init failed: " .. err)
@@ -134,9 +141,9 @@ while running do
     -- Poll SDL events
     local events = sdl.poll_events_ig() -- Use poll_events_ig to process ImGui inputs
     for i, event in ipairs(events) do
-        if event.type == sdl.SDL_EVENT_QUIT then
+        if event.type == sdl.EVENT_QUIT then
             running = false
-        elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
+        elseif event.type == sdl.EVENT_WINDOW_RESIZED then
             gl.viewport(0, 0, event.width, event.height)
         end
     end
