@@ -7,7 +7,7 @@ local lua_util = require("lua_util")
 local cglm = require("module_cglm")
 
 -- Initialize SDL video subsystem
-local success, err = sdl.init(sdl.SDL_INIT_VIDEO + sdl.SDL_INIT_EVENTS)
+local success, err = sdl.init(sdl.INIT_VIDEO + sdl.INIT_EVENTS)
 if not success then
     lua_util.log("Failed to initialize SDL: " .. err)
     sdl.quit()
@@ -15,7 +15,7 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 font 03", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 font 03", 800, 600, sdl.WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
@@ -247,9 +247,9 @@ while running do
     -- Handle events
     local events = sdl.poll_events()
     for i, event in ipairs(events) do
-        if event.type == sdl.SDL_EVENT_QUIT then
+        if event.type == sdl.EVENT_QUIT then
             running = false
-        elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
+        elseif event.type == sdl.EVENT_WINDOW_RESIZED then
             lua_util.log("Window resized to " .. event.width .. "x" .. event.height)
             gl.viewport(0, 0, event.width, event.height)
             projection = cglm.ortho(0, event.width, 0, event.height, -1, 1)
