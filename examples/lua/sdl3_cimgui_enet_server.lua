@@ -61,8 +61,21 @@ if not success then
     return
 end
 
+local function removeFirstMatch(tbl, value)
+  for i, v in ipairs(tbl) do
+    if v == value then
+      table.remove(tbl, i)
+      return
+    end
+  end
+end
+
 -- Main loop
 local running = true
+local peer_id = nil
+
+local client_peers = {}
+
 while running do
     -- Poll SDL events
     local events = sdl.poll_events_ig() -- Use poll_events_ig to process ImGui inputs
@@ -74,18 +87,20 @@ while running do
         end
     end
 
-
     -- local event = enet.host_service(host, 1000)  -- 1 second timeout
     local event = enet.host_service(host, 0)  -- 1 second timeout
     if type(event) == "table" and event.type then
         if event.type == enet.EVENT_TYPE_CONNECT then
             print("Client connected from:", event.peer)
+            table.insert(client_peers, event.peer) 
         elseif event.type == enet.EVENT_TYPE_DISCONNECT then
             print("Client disconnected:", event.peer)
+            removeFirstMatch(client_peers, event.peer)
         elseif event.type == enet.EVENT_TYPE_RECEIVE then
             local data = enet.packet_data(event.packet)
             print("Received from", event.peer, ":", data)
-            
+            print("event.channelID", event.channelID)
+            -- peer_id = event.peer
             -- Echo back the message
             local echo_packet = enet.packet_create(data, enet.PACKET_FLAG_RELIABLE)
             enet.peer_send(event.peer, event.channelID, echo_packet)
@@ -112,8 +127,23 @@ while running do
         imgui.ig_text("Server:")
         imgui.ig_text(server_status)
 
+        if imgui.ig_button("client(s)") then
+            print("clients: ", #client_peers)
+        end
+
         if imgui.ig_button("ping") then
-            print("Button clicked!")
+            print("ping!")
+            for _, peer_id in ipairs(client_peers) do
+                local packet = enet.packet_create("Hello, client!", enet.PACKET_FLAG_RELIABLE)
+                enet.peer_send(peer_id, 0, packet)    
+            end
+
+
+            -- just a test
+            -- if peer_id then
+            --     local packet = enet.packet_create("Hello, client!", enet.PACKET_FLAG_RELIABLE)
+            --     enet.peer_send(peer_id, 0, packet)
+            -- end
         end
 
 

@@ -157,7 +157,7 @@ end
 
 -- Cleanup
 
-enet.host_service(host, 100)  -- Process disconnect event
+enet.host_service(host, 0)  -- Process disconnect event
 enet.host_destroy(host)
 
 imgui.shutdown()

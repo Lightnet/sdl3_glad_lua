@@ -414,7 +414,7 @@ end
 
 ---
 
-Constants
+# Constants
 
 The module exposes SDL constants directly in the sdl table, including:
 
