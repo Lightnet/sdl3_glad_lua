@@ -605,8 +605,7 @@ static const struct luaL_Reg gl_lib[] = {
     {"delete_buffers", gl_delete_buffers},
 
     {"delete_vertex_arrays", gl_delete_vertex_arrays},
-    {"cull_face", gl_cull_face}, // This is the new gl_cull_face
-
+    {"cull_face", gl_cull_face},
     {"polygon_mode", gl_polygon_mode},
 
     
@@ -661,6 +660,5 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_FRONT); lua_setfield(L, -2, "FRONT");
 
     
-
     return 1;
 }

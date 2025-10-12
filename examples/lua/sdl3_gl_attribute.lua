@@ -34,12 +34,15 @@ end
 -- print("GL_DOUBLEBUFFER 3:" .. tostring(GL_DOUBLEBUFFER))
 
 -- Initialize OpenGL
-local success, gl_context, err = gl.init(window)
+local gl_context, success, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
+    gl.destroy()
     sdl.quit()
     return
 end
+print("success: " .. tostring(success))
+print("gl_context: " .. tostring(gl_context))
 
 -- work work here 
 -- note there is c gl set in module_sdl.c

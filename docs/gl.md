@@ -35,3 +35,17 @@ local gl = require("module_gl")
 ```
 gl.VERTEX_SHADER
 ```
+
+# error 3d result of plane 3d fixed.
+```
+glUniformMatrix4fv(location, count, GL_FALSE, matrix);
+```
+for 3D render
+0 = false 
+
+
+```
+luaL_checkinteger
+
+lua_toboolean
+```

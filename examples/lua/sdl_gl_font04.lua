@@ -24,12 +24,15 @@ if not window then
 end
 
 -- Initialize OpenGL
-local success, gl_context, err = gl.init(window)
+local gl_context, success, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
+    gl.destroy()
     sdl.quit()
     return
 end
+print("success: " .. tostring(success))
+print("gl_context: " .. tostring(gl_context))
 
 -- Enable blending
 gl.enable(gl.BLEND)

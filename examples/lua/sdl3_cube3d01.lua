@@ -1,10 +1,11 @@
+-- module
 local sdl = require("module_sdl")
 local gl = require("module_gl")
 local cglm = require("module_cglm")
 local lua_util = require("lua_util")
 
 -- Initialize SDL video subsystem
-local success, err = sdl.init(sdl.SDL_INIT_VIDEO)
+local success, err = sdl.init(sdl.INIT_VIDEO)
 if not success then
     lua_util.log("Failed to initialize SDL: " .. err)
     sdl.quit()
@@ -12,7 +13,7 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.WINDOW_OPENGL + sdl.WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
@@ -20,12 +21,15 @@ if not window then
 end
 
 -- Initialize OpenGL
-local success, gl_context, err = gl.init(window)
+local gl_context, success, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
+    gl.destroy()
     sdl.quit()
     return
 end
+print("success: " .. tostring(success))
+print("gl_context: " .. tostring(gl_context))
 
 -- Vertex Shader with MVP matrix
 local vertex_shader_source = [[
@@ -159,9 +163,9 @@ while running do
     -- Handle events
     local events = sdl.poll_events()
     for _, event in ipairs(events) do
-        if event.type == sdl.SDL_EVENT_QUIT then
+        if event.type == sdl.EVENT_QUIT then
             running = false
-        elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
+        elseif event.type == sdl.EVENT_WINDOW_RESIZED then
             gl.viewport(0, 0, event.width, event.height)
             projection = cglm.perspective(math.rad(45), event.width / event.height, 0.1, 100.0)
         end
@@ -188,7 +192,6 @@ while running do
     gl.bind_vertex_array(vao)
     gl.draw_elements(gl.TRIANGLES, #indices, gl.UNSIGNED_INT, 0)
 
-    
     -- swap window
     sdl.gl_swap_window(window)
 end

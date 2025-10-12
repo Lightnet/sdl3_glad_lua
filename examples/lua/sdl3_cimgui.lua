@@ -18,24 +18,24 @@ if not window then
     sdl.quit()
     return
 end
-
+print("window:" .. tostring(window))
 -- Initialize OpenGL
-local success, gl_context, err = gl.init(window)
+local gl_context, success, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
+    gl.destroy()
     sdl.quit()
     return
 end
-
-print("window:" .. tostring(window))
-print("gl_context:" .. tostring(gl_context))
+print("success: " .. tostring(success))
+print("gl_context: " .. tostring(gl_context))
 
 -- Access stored gl context
-local gl_context = gl.get_gl_context()
-if not gl_context then
-    print("Failed to get GL context: ", select(2, gl.get_gl_context()))
-    return
-end
+-- local gl_context = gl.get_gl_context()
+-- if not gl_context then
+--     print("Failed to get GL context: ", select(2, gl.get_gl_context()))
+--     return
+-- end
 
 print("gl_context:" .. tostring(gl_context))
 -- print("_G.sdl_window:" .. tostring(_G.sdl_window)) --nope it nil
