@@ -7,7 +7,7 @@ local lua_util = require("lua_util")
 local cglm = require("module_cglm")
 
 -- Initialize SDL video subsystem
-local success, err = sdl.init(sdl.SDL_INIT_VIDEO + sdl.SDL_INIT_EVENTS)
+local success, err = sdl.init(sdl.INIT_VIDEO + sdl.INIT_EVENTS)
 if not success then
     lua_util.log("Failed to initialize SDL: " .. err)
     sdl.quit()
@@ -15,7 +15,7 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 font 03", 800, 600, sdl.WINDOW_OPENGL + sdl.WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
@@ -77,7 +77,7 @@ lua_util.log("Font metrics: ascent=" .. ascent .. ", descent=" .. descent .. ", 
 lua_util.log("Scaled metrics: ascent=" .. (ascent * scale) .. ", descent=" .. (descent * scale))
 
 -- Bake font
-local bitmap, cdata, bitmap_width, bitmap_height, err = stb.bake_font(font_data, font_size, 512, 512)
+local bitmap, cdata, bitmap_width, bitmap_height, err = stb.bake_font(font_data, 32, 512, 512)
 if not bitmap then
     lua_util.log("Failed to bake font: " .. err)
     gl.destroy()
@@ -85,12 +85,6 @@ if not bitmap then
     return
 end
 lua_util.log("Font baked: " .. bitmap_width .. "x" .. bitmap_height)
-
--- Debug bitmap
-local success, err = stb.dump_bitmap(bitmap, bitmap_width, bitmap_height)
-if not success then
-    lua_util.log("Failed to dump bitmap: " .. err)
-end
 
 -- Create and set up text texture
 local text_texture = gl.gen_textures()
@@ -252,95 +246,92 @@ gl.viewport(0, 0, 800, 600)
 
 -- Create orthographic projection
 local projection = cglm.ortho(0, 800, 0, 600, -1, 1)
--- for col = 0, 3 do
---     for row = 0, 3 do
---         local value = projection:get(row, col)
---         -- lua_util.log(string.format("projection[%d][%d] = %f", row, col, value))
---     end
--- end
+for col = 0, 3 do
+    for row = 0, 3 do
+        local value = projection:get(row, col)
+        lua_util.log(string.format("projection[%d][%d] = %f", row, col, value))
+    end
+end
 
 -- Main loop
 local running = true
-local text = "Hello, World.!'"
+local text = "Hello, World!'"
+
 local max_height = ascent * scale -- Maximum glyph height (32 pixels)
+
 while running do
     -- Handle events
     local events = sdl.poll_events()
     for i, event in ipairs(events) do
-        if event.type == sdl.SDL_EVENT_QUIT then
+        if event.type == sdl.EVENT_QUIT then
             running = false
-        elseif event.type == sdl.SDL_EVENT_WINDOW_RESIZED then
+        elseif event.type == sdl.EVENT_WINDOW_RESIZED then
             lua_util.log("Window resized to " .. event.width .. "x" .. event.height)
             gl.viewport(0, 0, event.width, event.height)
             projection = cglm.ortho(0, event.width, 0, event.height, -1, 1)
-            -- for col = 0, 3 do
-            --     for row = 0, 3 do
-            --         local value = projection:get(row, col)
-            --         lua_util.log(string.format("projection[%d][%d] = %f", row, col, value))
-            --     end
-            -- end
+            for col = 0, 3 do
+                for row = 0, 3 do
+                    local value = projection:get(row, col)
+                    lua_util.log(string.format("projection[%d][%d] = %f", row, col, value))
+                end
+            end
         end
     end
 
     -- Generate text vertices
     local vertices = {}
     local x = 400
-    local y = 600 - 128 - 50 -- Baseline position below image (y=422)
+    local y = 600 - 128 - 50 -- Below image quad, adjusted
+    local baseline = y -- Store baseline for normalization
     for i = 1, #text do
         local char = string.byte(text, i)
         local x0, y0, x1, y1, s0, t0, s1, t1, x_advance = stb.get_baked_quad(cdata, bitmap_width, bitmap_height, char, x, y)
         if x0 then
-            -- Calculate glyph height and offset to align to baseline
+            -- Normalize y0, y1 to baseline
             local height = y1 - y0
-            local offset
-            if y1 > y then -- Descender glyph (e.g., ',')
-                offset = (descent * scale) - (y1 - y) -- Align descender to baseline
-                -- offset = height - max_height - 8
-            else
-                -- offset = height - max_height -- Align non-descenders to baseline
-                offset = (descent * scale) - (y1 - y)
-            end
-
-            -- offset = height - max_height -- Align non-descenders to baseline
-
-
+            local offset = max_height - height -- Move smaller glyphs down
             
+            -- base
+            -- y0 = baseline - height -- Align bottom to baseline
+            -- y1 = baseline
 
-            y0 = y0 + offset
-            y1 = y1 + offset
-            -- Flip texture coordinates in Y
+            -- test
+            y0 = baseline - height - offset
+            y1 = baseline - offset 
+
+            -- Flip texture coordinates in Y to correct orientation
             local t0_flipped = t1
             local t1_flipped = t0
-            -- Triangle 1 (top-left, top-right, bottom-right)
-            vertices[#vertices + 1] = x0
-            vertices[#vertices + 1] = y1
-            vertices[#vertices + 1] = s0
-            vertices[#vertices + 1] = t1_flipped
-            vertices[#vertices + 1] = x1
-            vertices[#vertices + 1] = y1
-            vertices[#vertices + 1] = s1
-            vertices[#vertices + 1] = t1_flipped
-            vertices[#vertices + 1] = x1
-            vertices[#vertices + 1] = y0
-            vertices[#vertices + 1] = s1
-            vertices[#vertices + 1] = t0_flipped
-            -- Triangle 2 (top-left, bottom-right, bottom-left)
-            vertices[#vertices + 1] = x0
-            vertices[#vertices + 1] = y1
-            vertices[#vertices + 1] = s0
-            vertices[#vertices + 1] = t1_flipped
-            vertices[#vertices + 1] = x1
-            vertices[#vertices + 1] = y0
-            vertices[#vertices + 1] = s1
-            vertices[#vertices + 1] = t0_flipped
+            -- Triangle 1
             vertices[#vertices + 1] = x0
             vertices[#vertices + 1] = y0
             vertices[#vertices + 1] = s0
             vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = x1
+            vertices[#vertices + 1] = y0
+            vertices[#vertices + 1] = s1
+            vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = x1
+            vertices[#vertices + 1] = y1
+            vertices[#vertices + 1] = s1
+            vertices[#vertices + 1] = t1_flipped
+            -- Triangle 2
+            vertices[#vertices + 1] = x0
+            vertices[#vertices + 1] = y0
+            vertices[#vertices + 1] = s0
+            vertices[#vertices + 1] = t0_flipped
+            vertices[#vertices + 1] = x1
+            vertices[#vertices + 1] = y1
+            vertices[#vertices + 1] = s1
+            vertices[#vertices + 1] = t1_flipped
+            vertices[#vertices + 1] = x0
+            vertices[#vertices + 1] = y1
+            vertices[#vertices + 1] = s0
+            vertices[#vertices + 1] = t1_flipped
             x = x + x_advance
-            lua_util.log(string.format("Char %d: x0=%.2f, y0=%.2f, x1=%.2f, y1=%.2f, s0=%.2f, t0=%.2f, s1=%.2f, t1=%.2f, x_advance=%.2f, height=%.2f, offset=%.2f", char, x0, y0, x1, y1, s0, t0, s1, t1, x_advance, height, offset))
+            lua_util.log(string.format("Char %d: x0=%.2f, y0=%.2f, x1=%.2f, y1=%.2f, s0=%.2f, t0=%.2f, s1=%.2f, t1=%.2f, x_advance=%.2f", char, x0, y0, x1, y1, s0, t0, s1, t1, x_advance))
         else
-            lua_util.log("Failed to get quad for char " .. char .. ": " .. (err or "unknown error"))
+            lua_util.log("Failed to get quad for char " .. char .. ": " .. err)
         end
     end
     local text_vertexData = ""

@@ -131,6 +131,8 @@ while running do
 end
 
 -- Cleanup
+gl.delete_vertex_arrays({vao})
+gl.delete_buffers({vbo})
 gl.delete_shader(vertexShader)
 gl.delete_shader(fragmentShader)
 gl.delete_program(shaderProgram)

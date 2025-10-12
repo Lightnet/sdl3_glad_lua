@@ -1,5 +1,5 @@
 -- main.lua
-
+-- triangle and cimgui
 local sdl = require("module_sdl")
 local gl = require("module_gl") -- Global to ensure _G.gl is set for gl_init
 local imgui = require("module_imgui")
@@ -40,7 +40,7 @@ if not gl_context then
 end
 
 -- Initialize ImGui with sdl_window and gl_context
-success, err = imgui.init(_G.sdl_window, gl_context)
+success, err = imgui.init(window, gl_context)
 if not success then
     print("ImGui init failed: " .. err)
     gl.destroy()
@@ -162,7 +162,7 @@ while running do
 
     -- Render
     gl.clear_color(0.2, 0.3, 0.3, 1.0)
-    gl.clear()
+    gl.clear(gl.COLOR_BUFFER_BIT)
 
     gl.use_program(shaderProgram)
     gl.bind_vertex_array(vao)
@@ -170,11 +170,14 @@ while running do
 
     imgui.render_draw_data() -- draw gl imgui 
 
-    gl.swap_buffers()
+    -- Swap window
+    sdl.gl_swap_window(window)
 end
 
 -- Cleanup
 imgui.shutdown()
+gl.delete_vertex_arrays({vao})
+gl.delete_buffers({vbo})
 gl.delete_shader(vertexShader)
 gl.delete_shader(fragmentShader)
 gl.delete_program(shaderProgram)

@@ -32,20 +32,6 @@ if not success then
     return
 end
 
--- Demo: Access stored context
--- if gl.gl_context then
---     util.log("GL context stored: " .. tostring(gl.gl_context))
--- else
---     util.log("GL context not stored (error)")
--- end
-
--- Initialize ImGui
--- local success, err = imgui.init(window, gl.gl_context)
--- if not success then
---     print("Failed to initialize ImGui: " .. err)
---     return
--- end
-
 -- Vertex Shader
 local vertexShaderSource = [[
 #version 330 core
@@ -153,6 +139,8 @@ while running do
 end
 
 -- Cleanup
+gl.delete_vertex_arrays({vao})
+gl.delete_buffers({vbo})
 gl.delete_shader(vertexShader)
 gl.delete_shader(fragmentShader)
 gl.delete_program(shaderProgram)

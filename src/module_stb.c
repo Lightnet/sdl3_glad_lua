@@ -175,8 +175,6 @@ static int stb_get_baked_quad(lua_State *L) {
     return 9;
 }
 
-
-
 // Lua: stb.get_font_vmetrics(font_data) -> ascent, descent, lineGap
 static int stb_get_font_vmetrics(lua_State *L) {
     unsigned char **font_data = (unsigned char **)luaL_checkudata(L, 1, "stb.font");

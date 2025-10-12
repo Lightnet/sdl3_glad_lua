@@ -1,5 +1,5 @@
--- main.lua (or sdl_gl_image05.lua)
-
+-- sdl_gl_font.lua
+-- align top
 local sdl = require("module_sdl")
 local gl = require("module_gl")
 local stb = require("module_stb")
@@ -15,7 +15,7 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 font 02", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()

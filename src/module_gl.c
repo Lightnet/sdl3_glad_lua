@@ -423,7 +423,6 @@ static int gl_blend_func(lua_State *L) {
 }
 
 // Lua: gl.dummy_uniform_matrix4fv(location, count, transpose) (kept for reference)
-// working test.
 static int gl_dummy_uniform_matrix4fv(lua_State *L) {
     GLint location = (GLint)luaL_checkinteger(L, 1);
     GLsizei count = (GLsizei)luaL_checkinteger(L, 2);
@@ -559,7 +558,6 @@ static int gl_polygon_mode(lua_State *L) {
     return push_gl_error(L, "glPolygonMode");
 }
 
-
 static const struct luaL_Reg gl_lib[] = {
     {"init", gl_init},
     {"destroy", gl_destroy},
@@ -622,8 +620,6 @@ int luaopen_module_gl(lua_State *L) {
     lua_setfield(L, -2, "gl_context");
     // Add constants
     lua_pushinteger(L, GL_VERSION); lua_setfield(L, -2, "VERSION");
-
-
     lua_pushinteger(L, GL_VERTEX_SHADER); lua_setfield(L, -2, "VERTEX_SHADER");
     lua_pushinteger(L, GL_FRAGMENT_SHADER); lua_setfield(L, -2, "FRAGMENT_SHADER");
     lua_pushinteger(L, GL_ARRAY_BUFFER); lua_setfield(L, -2, "ARRAY_BUFFER");
@@ -632,14 +628,12 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_TRIANGLES); lua_setfield(L, -2, "TRIANGLES");
     lua_pushinteger(L, GL_COLOR_BUFFER_BIT); lua_setfield(L, -2, "COLOR_BUFFER_BIT");
     lua_pushinteger(L, GL_DEPTH_BUFFER_BIT); lua_setfield(L, -2, "DEPTH_BUFFER_BIT");
-
     lua_pushinteger(L, GL_ELEMENT_ARRAY_BUFFER); lua_setfield(L, -2, "ELEMENT_ARRAY_BUFFER");
     lua_pushinteger(L, GL_UNSIGNED_INT); lua_setfield(L, -2, "UNSIGNED_INT");
     lua_pushinteger(L, GL_FALSE); lua_setfield(L, -2, "FALSE");
     lua_pushinteger(L, GL_TRUE); lua_setfield(L, -2, "TRUE");
     lua_pushinteger(L, GL_ONE); lua_setfield(L, -2, "ONE");
     lua_pushinteger(L, GL_RED); lua_setfield(L, -2, "RED");
-
     lua_pushinteger(L, GL_TEXTURE_2D); lua_setfield(L, -2, "TEXTURE_2D");
     lua_pushinteger(L, GL_TEXTURE_MIN_FILTER); lua_setfield(L, -2, "TEXTURE_MIN_FILTER");
     lua_pushinteger(L, GL_TEXTURE_MAG_FILTER); lua_setfield(L, -2, "TEXTURE_MAG_FILTER");
@@ -648,7 +642,6 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_RGB); lua_setfield(L, -2, "RGB");
     lua_pushinteger(L, GL_RGBA); lua_setfield(L, -2, "RGBA");
     lua_pushinteger(L, GL_UNSIGNED_BYTE); lua_setfield(L, -2, "UNSIGNED_BYTE");
-
     lua_pushinteger(L, GL_TEXTURE0); lua_setfield(L, -2, "TEXTURE0");
     lua_pushinteger(L, GL_TEXTURE1); lua_setfield(L, -2, "TEXTURE1");
     lua_pushinteger(L, GL_BLEND); lua_setfield(L, -2, "BLEND");
@@ -659,15 +652,15 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_TEXTURE_WRAP_T); lua_setfield(L, -2, "TEXTURE_WRAP_T");
     lua_pushinteger(L, GL_CLAMP_TO_EDGE); lua_setfield(L, -2, "CLAMP_TO_EDGE");
     lua_pushinteger(L, GL_DYNAMIC_DRAW); lua_setfield(L, -2, "DYNAMIC_DRAW");
-
     lua_pushinteger(L, GL_DEPTH_TEST); lua_setfield(L, -2, "DEPTH_TEST");
-
     lua_pushinteger(L, GL_CULL_FACE); lua_setfield(L, -2, "CULL_FACE");
     lua_pushinteger(L, GL_BACK); lua_setfield(L, -2, "BACK");
     lua_pushinteger(L, GL_FRONT_AND_BACK); lua_setfield(L, -2, "FRONT_AND_BACK");
     lua_pushinteger(L, GL_LINE); lua_setfield(L, -2, "LINE");
     lua_pushinteger(L, GL_LESS); lua_setfield(L, -2, "LESS");
     lua_pushinteger(L, GL_FRONT); lua_setfield(L, -2, "FRONT");
+
+    
 
     return 1;
 }

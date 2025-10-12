@@ -320,9 +320,7 @@ endif()
 # set(APP_FONT sdl3_font)
 # add_executable(${APP_FONT}
 #     glad/src/gl.c
-#     # examples/c/sdl3_font.c
 #     examples/c/sdl3_font02.c
-#     # examples/c/triangle.c
 # )
 # target_link_libraries(${APP_FONT} PUBLIC 
 #     SDL3::SDL3
@@ -387,23 +385,63 @@ endif()
 # endif()
 
 
+# set(APP_cube3d sdl3_cube3d)
+# add_executable(${APP_cube3d}
+#     glad/src/gl.c
+#     samples/cube3d/src/main.c
+#     samples/cube3d/src/module_sdl.c
+#     samples/cube3d/src/module_gl.c
+#     samples/cube3d/src/module_cglm.c
+#     samples/cube3d/src/module_lua.c
+# )
+# target_link_libraries(${APP_cube3d} PUBLIC 
+#     SDL3::SDL3                                          # sdl 3
+#     cglm                                                # cglm
+#     lua
+# )
+# target_include_directories(${APP_cube3d} PUBLIC
+#     samples/cube3d/include
+#     ${CMAKE_SOURCE_DIR}/glad/include                    # glad 2.0
+#     ${stb_SOURCE_DIR}                                   # stb
+#     ${cglm_SOURCE_DIR}/include                          # cglm
+#     ${SDL3_SOURCE_DIR}/include                          # SDL 3.2.22
+#     ${lua_SOURCE_DIR}/include                   # lua
+# )
+# # Platform-specific settings for Windows (MinGW/MSYS2)
+# if (WIN32)
+#     # Link necessary Windows libraries for raylib
+#     target_link_libraries(${APP_cube3d} PRIVATE
+#         opengl32                                        # opengl
+#         gdi32                                           # Windows Graphics Device Interface
+#         winmm                                           # Windows Multimedia API 
+#         ws2_32                                          # Winsock 2
+#     )
+#     # Static linking for libgcc and libstdc++
+#     target_link_options(${APP_cube3d} PRIVATE
+#         -static-libgcc                                  # GNU Compiler Collection
+#         -static-libstdc++                               # Uncomment if C++ code is used # need for imgui
+#         -static                                         # Avoid full static linking to prevent issues with system libraries
+#     )
+# endif()
 
-set(APP_cube3d sdl3_cube3d)
-add_executable(${APP_cube3d}
+
+set(APP_Font2D sdl3_font2d)
+add_executable(${APP_Font2D}
     glad/src/gl.c
-    cube3d/src/main.c
-    cube3d/src/module_sdl.c
-    cube3d/src/module_gl.c
-    cube3d/src/module_cglm.c
-    cube3d/src/module_lua.c
+    samples/font2d/src/main.c
+    samples/font2d/src/module_sdl.c
+    samples/font2d/src/module_gl.c
+    samples/font2d/src/module_cglm.c
+    samples/font2d/src/module_lua.c
+    samples/font2d/src/module_stb.c
 )
-target_link_libraries(${APP_cube3d} PUBLIC 
+target_link_libraries(${APP_Font2D} PUBLIC 
     SDL3::SDL3                                          # sdl 3
     cglm                                                # cglm
     lua
 )
-target_include_directories(${APP_cube3d} PUBLIC
-    cube3d/include
+target_include_directories(${APP_Font2D} PUBLIC
+    samples/font2d/include
     ${CMAKE_SOURCE_DIR}/glad/include                    # glad 2.0
     ${stb_SOURCE_DIR}                                   # stb
     ${cglm_SOURCE_DIR}/include                          # cglm
@@ -413,16 +451,19 @@ target_include_directories(${APP_cube3d} PUBLIC
 # Platform-specific settings for Windows (MinGW/MSYS2)
 if (WIN32)
     # Link necessary Windows libraries for raylib
-    target_link_libraries(${APP_cube3d} PRIVATE
+    target_link_libraries(${APP_Font2D} PRIVATE
         opengl32                                        # opengl
         gdi32                                           # Windows Graphics Device Interface
         winmm                                           # Windows Multimedia API 
         ws2_32                                          # Winsock 2
     )
     # Static linking for libgcc and libstdc++
-    target_link_options(${APP_cube3d} PRIVATE
+    target_link_options(${APP_Font2D} PRIVATE
         -static-libgcc                                  # GNU Compiler Collection
         -static-libstdc++                               # Uncomment if C++ code is used # need for imgui
         -static                                         # Avoid full static linking to prevent issues with system libraries
     )
 endif()
+
+
+

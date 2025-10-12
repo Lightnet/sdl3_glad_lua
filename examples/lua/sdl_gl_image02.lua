@@ -14,7 +14,7 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 cube3d", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 image 02", 800, 600, sdl.SDL_WINDOW_OPENGL + sdl.SDL_WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
@@ -177,6 +177,8 @@ while running do
 end
 
 -- Cleanup
+gl.delete_vertex_arrays({vao})
+gl.delete_buffers({vbo,ebo})
 gl.delete_shader(vertexShader)
 gl.delete_shader(fragmentShader)
 gl.delete_program(shaderProgram)

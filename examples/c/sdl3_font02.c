@@ -36,7 +36,6 @@ int main() {
     }
     SDL_GL_MakeCurrent(window, gl_context);
 
-
     int version = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress);
     if (version == 0) {
         printf("Failed to initialize GLAD\n");
@@ -48,15 +47,6 @@ int main() {
     int minor = GLAD_VERSION_MINOR(version);
     printf("Loaded OpenGL version %d.%d\n", major, minor);
 
-    // Load OpenGL functions with GLAD using SDL's loader
-    // if (!gladLoaderLoadGL((GLADloadfunc)SDL_GL_GetProcAddress)) {
-    // if (!gladLoaderLoadGL()) {
-    //     printf("Error: Failed to load OpenGL functions with GLAD\n");
-    //     SDL_GL_DestroyContext(gl_context);
-    //     SDL_DestroyWindow(window);
-    //     SDL_Quit();
-    //     return -1;
-    // }
     printf("OpenGL loaded: version %s\n", glGetString(GL_VERSION));  // Optional: Verify loaded version
 
     // Load font

@@ -1,7 +1,7 @@
 #include "module_sdl.h"
 #include <SDL3/SDL.h>
-#include <cimgui.h>  // For ImGui_ImplSDL3_ProcessEvent
-#include <cimgui_impl.h>
+// #include <cimgui.h>  // For ImGui_ImplSDL3_ProcessEvent
+// #include <cimgui_impl.h>
 #include <lauxlib.h>
 
 // Helper: Push event and subsystem constants table
@@ -15,15 +15,25 @@ static void push_event_constants(lua_State *L) {
     lua_setfield(L, -2, "EVENT_KEY_DOWN");
     lua_pushinteger(L, SDL_EVENT_MOUSE_BUTTON_DOWN);
     lua_setfield(L, -2, "EVENT_MOUSE_BUTTON_DOWN");
+     lua_pushinteger(L, SDL_EVENT_WINDOW_CLOSE_REQUESTED);
+    lua_setfield(L, -2, "EVENT_WINDOW_CLOSE_REQUESTED"); 
     // Window flags
+    lua_pushinteger(L, SDL_WINDOW_HIDDEN);
+    lua_setfield(L, -2, "WINDOW_HIDDEN");
     lua_pushinteger(L, SDL_WINDOW_OPENGL);
     lua_setfield(L, -2, "WINDOW_OPENGL");
     lua_pushinteger(L, SDL_WINDOW_RESIZABLE);
     lua_setfield(L, -2, "WINDOW_RESIZABLE");
     lua_pushinteger(L, SDL_WINDOW_HIGH_PIXEL_DENSITY);
-    lua_setfield(L, -2, "WINDOW_HIGH_PIXEL_DENSITY");
+    lua_setfield(L, -2, "WINDOW_HIGH_PIXEL_DENSITY"); 
+
     lua_pushinteger(L, SDL_WINDOW_MINIMIZED);
     lua_setfield(L, -2, "WINDOW_MINIMIZED");
+
+    // Window position
+    lua_pushinteger(L, SDL_WINDOWPOS_CENTERED);
+    lua_setfield(L, -2, "WINDOWPOS_CENTERED"); // Added for sdl3_font.lua
+
 
     // GL attributes
     lua_pushinteger(L, SDL_GL_RED_SIZE);
@@ -72,6 +82,7 @@ static void push_event_constants(lua_State *L) {
     lua_setfield(L, -2, "INIT_EVENTS");
     lua_pushinteger(L, 0);
     lua_setfield(L, -2, "INIT_NONE");
+
 
 }
 
@@ -175,42 +186,42 @@ static int sdl_poll_events(lua_State *L) {
     return 1;
 }
 
-// Lua: sdl.poll_events() -> table of events and imgui ProcessEvent
-static int sdl_poll_events_ig(lua_State *L) {
-    lua_newtable(L);
-    int idx = 1;
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        // Process event for ImGui input
-        ImGui_ImplSDL3_ProcessEvent(&event);
+// // Lua: sdl.poll_events() -> table of events and imgui ProcessEvent
+// static int sdl_poll_events_ig(lua_State *L) {
+//     lua_newtable(L);
+//     int idx = 1;
+//     SDL_Event event;
+//     while (SDL_PollEvent(&event)) {
+//         // Process event for ImGui input
+//         ImGui_ImplSDL3_ProcessEvent(&event);
 
-        lua_pushinteger(L, idx++);
-        lua_newtable(L);
+//         lua_pushinteger(L, idx++);
+//         lua_newtable(L);
         
-        lua_pushinteger(L, (lua_Integer)event.type);
-        lua_setfield(L, -2, "type");
+//         lua_pushinteger(L, (lua_Integer)event.type);
+//         lua_setfield(L, -2, "type");
         
-        if (event.type == SDL_EVENT_KEY_DOWN) {
-            lua_pushinteger(L, (lua_Integer)event.key.key);
-            lua_setfield(L, -2, "key");
-        } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-            lua_pushinteger(L, (lua_Integer)event.button.button);
-            lua_setfield(L, -2, "button");
-            lua_pushinteger(L, (lua_Integer)event.button.x);
-            lua_setfield(L, -2, "x");
-            lua_pushinteger(L, (lua_Integer)event.button.y);
-            lua_setfield(L, -2, "y");
-        } else if (event.type == SDL_EVENT_WINDOW_RESIZED) {
-            lua_pushinteger(L, (lua_Integer)event.window.data1);
-            lua_setfield(L, -2, "width");
-            lua_pushinteger(L, (lua_Integer)event.window.data2);
-            lua_setfield(L, -2, "height");
-        }
+//         if (event.type == SDL_EVENT_KEY_DOWN) {
+//             lua_pushinteger(L, (lua_Integer)event.key.key);
+//             lua_setfield(L, -2, "key");
+//         } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+//             lua_pushinteger(L, (lua_Integer)event.button.button);
+//             lua_setfield(L, -2, "button");
+//             lua_pushinteger(L, (lua_Integer)event.button.x);
+//             lua_setfield(L, -2, "x");
+//             lua_pushinteger(L, (lua_Integer)event.button.y);
+//             lua_setfield(L, -2, "y");
+//         } else if (event.type == SDL_EVENT_WINDOW_RESIZED) {
+//             lua_pushinteger(L, (lua_Integer)event.window.data1);
+//             lua_setfield(L, -2, "width");
+//             lua_pushinteger(L, (lua_Integer)event.window.data2);
+//             lua_setfield(L, -2, "height");
+//         }
         
-        lua_settable(L, -3);
-    }
-    return 1;
-}
+//         lua_settable(L, -3);
+//     }
+//     return 1;
+// }
 
 // Lua: sdl.quit()
 static int sdl_quit(lua_State *L) {
@@ -383,11 +394,22 @@ static int sdl_delay(lua_State *L) {
     return 0;
 }
 
+// Lua: sdl.get_current_gl_context() -> context
+static int sdl_get_current_gl_context(lua_State *L) {
+    SDL_GLContext context = SDL_GL_GetCurrentContext();
+    if (!context) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushlightuserdata(L, context);
+    return 1;
+}
+
 static const struct luaL_Reg sdl_lib[] = {
     {"init", sdl_init},
     {"init_window", sdl_init_window},
     {"poll_events", sdl_poll_events},
-    {"poll_events_ig", sdl_poll_events_ig},
+    // {"poll_events_ig", sdl_poll_events_ig},
     {"quit", sdl_quit},
     {"gl_reset_attribute", sdl_gl_reset_attribute},
     {"gl_set_attribute", sdl_gl_set_attribute},
@@ -402,6 +424,7 @@ static const struct luaL_Reg sdl_lib[] = {
     {"get_window_size", sdl_get_window_size},
     {"get_window_id", sdl_get_window_id},
     {"delay", sdl_delay},
+    {"get_current_gl_context", sdl_get_current_gl_context},
 
     {NULL, NULL}
 };
