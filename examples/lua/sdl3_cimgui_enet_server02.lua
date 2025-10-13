@@ -88,12 +88,6 @@ local function countClients(tbl)
     return count
 end
 
--- Configure throttling for new peers (example)
-local function configure_peer_throttling(peer)
-    print("configure_peer_throttling")
-    enet.peer_throttle_configure(peer, 1000, 1000, 1000) -- interval, acceleration, deceleration
-end
-
 while running do
     -- Poll SDL events
     local events = sdl.poll_events_ig() -- Use poll_events_ig to process ImGui inputs
@@ -107,39 +101,34 @@ while running do
 
     -- local event = enet.host_service(host, 1000)  -- 1 second timeout
     local event = enet.host_service(host, 0)  -- 1 second timeout
-    -- local event = enet.host_check_events(host)
     if type(event) == "table" and event.type then
         if event.type == enet.EVENT_TYPE_CONNECT then
-            local connect_id = enet.peer_get_connect_id(event.peer)
+             local connect_id = enet.peer_get_connect_id(event.peer)
             if not connect_id then
                 print("Error: Failed to get connect ID for peer:", event.peer)
-                connect_id = tostring(math.random(1000000))
+                connect_id = tostring(math.random(1000000)) -- Fallback
             end
-            local incoming_id = enet.peer_get_incoming_peer_id(event.peer)
-            local state = enet.peer_get_state(event.peer)
-            print("[CONNECT] connect_id:", connect_id, "incoming_peer_id:", incoming_id, "state:", state)
+            print("[CONNECT] connect_id:", connect_id)
             print("Client connected with connectID:", connect_id, "from:", event.peer)
-            client_peers[connect_id] = event.peer
+            client_peers[connect_id] = event.peer -- Update peer userdata
             connection_times[connect_id] = sdl.get_ticks()
-            configure_peer_throttling(event.peer)
 
         elseif event.type == enet.EVENT_TYPE_DISCONNECT then
-            local connect_id = enet.peer_get_connect_id(event.peer)
-            local state = enet.peer_get_state(event.peer)
+           local connect_id = enet.peer_get_connect_id(event.peer)
             if not connect_id then
                 print("Error: Failed to get connect ID for disconnecting peer:", event.peer)
             else
-                print("[DISCONNECT] connect_id:", connect_id, "state:", state)
+                print("[DISCONNECT] connect_id:", connect_id)
                 print("Client disconnected with connectID:", connect_id, "from:", event.peer, "duration:", connection_times[connect_id] and (sdl.get_ticks() - connection_times[connect_id]) or 0, "ms")
                 removePeerById(connect_id)
             end
 
         elseif event.type == enet.EVENT_TYPE_RECEIVE then
             local connect_id = enet.peer_get_connect_id(event.peer) or "unknown"
-            local state = enet.peer_get_state(event.peer)
             local data = enet.packet_data(event.packet)
-            print("Received from connectID:", connect_id, "peer:", event.peer, "state:", state, ":", data)
+            print("Received from connectID:", connect_id, "peer:", event.peer, ":", data)
             print("event.channelID", event.channelID)
+            -- Update peer userdata in client_peers
             if connect_id ~= "unknown" then
                 client_peers[connect_id] = event.peer
             end

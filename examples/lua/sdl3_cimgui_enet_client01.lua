@@ -114,9 +114,7 @@ while running do
     local event = enet.host_service(host, 0)
     if type(event) == "table" and event.type then
         if event.type == enet.EVENT_TYPE_CONNECT then
-            local incoming_id = enet.peer_get_incoming_peer_id(peer)
-            local state = enet.peer_get_state(peer)
-            print("Connected to server! connectID:", connect_id, "incoming_peer_id:", incoming_id, "state:", state)
+            print("Connected to server! connectID:", connect_id)
             connect_status = "Connected"
             connected = true
             local packet = enet.packet_create("Hello, server! connectID: " .. connect_id, enet.PACKET_FLAG_RELIABLE)
@@ -127,7 +125,6 @@ while running do
                 print("Failed to send initial message:", result)
             end
             enet.host_flush(host)
-            enet.peer_throttle_configure(peer, 1000, 1000, 1000) -- Configure throttling
 
         elseif event.type == enet.EVENT_TYPE_RECEIVE then
             local data = enet.packet_data(event.packet)
@@ -135,15 +132,14 @@ while running do
             enet.packet_destroy(event.packet)
 
         elseif event.type == enet.EVENT_TYPE_DISCONNECT then
-            local state = enet.peer_get_state(peer)
-            print("Disconnected from server. connectID:", connect_id, "state:", state)
+            print("Disconnected from server. connectID:", connect_id)
             connect_status = "Disconnected"
             connected = false
             peer = nil
             connect_id = nil
         end
     elseif event ~= 0 then
-        print("Check events error:", event)
+        print("Service error:", event)
         connect_status = "Service error"
         connected = false
         peer = nil
