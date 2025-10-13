@@ -257,13 +257,126 @@ static int enet_packet_gc(lua_State *L) {
     return 0;
 }
 
-// Garbage collection for ENetPeer (ENet manages peers via host)
 static int enet_peer_gc(lua_State *L) {
     ENetPeer **peer = (ENetPeer**)luaL_checkudata(L, 1, ENET_PEER_MT);
-    // Peers are destroyed by host; just nullify
-    if (peer) *peer = NULL;
+    if (peer && *peer) {
+        if ((*peer)->data) {
+            free((*peer)->data); // Free allocated string
+            (*peer)->data = NULL;
+        }
+        *peer = NULL; // Peers are destroyed by host
+    }
     return 0;
 }
+
+// enet.peer_reset(peer)
+static int l_enet_peer_reset(lua_State *L) {
+    ENetPeer **peer = (ENetPeer**)luaL_checkudata(L, 1, ENET_PEER_MT);
+    if (!peer || !*peer) {
+        lua_pushnil(L);
+        return 1;
+    }
+    enet_peer_reset(*peer);
+    *peer = NULL;  // Nullify to prevent accidental reuse
+    return 0;
+}
+
+// enet.peer_disconnect(peer, [data])
+static int l_enet_peer_disconnect(lua_State *L) {
+    ENetPeer **peer = (ENetPeer**)luaL_checkudata(L, 1, ENET_PEER_MT);
+    if (!peer || !*peer) {
+        lua_pushnil(L);
+        return 1;
+    }
+    enet_uint32 data = (enet_uint32)luaL_optinteger(L, 2, 0);
+    enet_peer_disconnect(*peer, data);
+    return 0;
+}
+
+// enet.host_broadcast(host, channelID, packet)
+static int l_enet_host_broadcast(lua_State *L) {
+    ENetHost **host = (ENetHost**)luaL_checkudata(L, 1, ENET_HOST_MT);
+    enet_uint8 channelID = (enet_uint8)luaL_checkinteger(L, 2);
+    ENetPacket **packet = (ENetPacket**)luaL_checkudata(L, 3, ENET_PACKET_MT);
+
+    if (!host || !*host || !packet || !*packet) {
+        lua_pushinteger(L, -1);
+        return 1;
+    }
+
+    enet_host_broadcast(*host, channelID, *packet);
+    *packet = NULL; // Ownership transferred to ENet
+    lua_pushinteger(L, 0);
+    return 1;
+}
+
+// enet.peer_disconnect_later(peer, [data])
+static int l_enet_peer_disconnect_later(lua_State *L) {
+    ENetPeer **peer = (ENetPeer**)luaL_checkudata(L, 1, ENET_PEER_MT);
+    if (!peer || !*peer) {
+        lua_pushnil(L);
+        return 1;
+    }
+    enet_uint32 data = (enet_uint32)luaL_optinteger(L, 2, 0);
+    enet_peer_disconnect_later(*peer, data);
+    return 0;
+}
+
+// enet.peer_set_data(peer, data)
+static int l_enet_peer_set_data(lua_State *L) {
+    ENetPeer **peer = (ENetPeer**)luaL_checkudata(L, 1, ENET_PEER_MT);
+    if (!peer || !*peer) {
+        lua_pushnil(L);
+        return 1;
+    }
+    // Free any existing data (assuming it's a string allocated by us)
+    if ((*peer)->data) {
+        free((*peer)->data);
+        (*peer)->data = NULL;
+    }
+    if (!lua_isnil(L, 2)) {
+        const char *data = luaL_checkstring(L, 2);
+        (*peer)->data = strdup(data); // Allocate and copy string
+    }
+    return 0;
+}
+
+// enet.peer_get_data(peer) -> string or nil
+static int l_enet_peer_get_data(lua_State *L) {
+    ENetPeer **peer = (ENetPeer**)luaL_checkudata(L, 1, ENET_PEER_MT);
+    if (!peer || !*peer || !(*peer)->data) {
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushstring(L, (const char*)(*peer)->data);
+    return 1;
+}
+
+// enet.host_flush(host)
+static int l_enet_host_flush(lua_State *L) {
+    ENetHost **host = (ENetHost**)luaL_checkudata(L, 1, ENET_HOST_MT);
+    if (!host || !*host) {
+        fprintf(stderr, "enet.host_flush: Invalid host\n");
+        lua_pushinteger(L, -1);
+        return 1;
+    }
+    enet_host_flush(*host);
+    lua_pushinteger(L, 0);
+    return 1;
+}
+
+// Lua: enet.peer_get_connect_id(peer) -> integer
+static int l_enet_peer_get_connect_id(lua_State *L) {
+    ENetPeer **peer = (ENetPeer**)luaL_checkudata(L, 1, ENET_PEER_MT);
+    if (!peer || !*peer) {
+        fprintf(stderr, "enet.peer_get_connect_id: Invalid peer\n");
+        lua_pushnil(L);
+        return 1;
+    }
+    lua_pushinteger(L, (lua_Integer)(*peer)->connectID);
+    return 1;
+}
+
 
 // Module-level functions
 static const luaL_Reg enet_funcs[] = {
@@ -273,10 +386,20 @@ static const luaL_Reg enet_funcs[] = {
     {"host_destroy", l_enet_host_destroy},
     {"host_connect", l_enet_host_connect},
     {"host_service", l_enet_host_service},
+    {"host_flush", l_enet_host_flush}, // Add host_flush
     {"packet_create", l_enet_packet_create},
     {"packet_destroy", l_enet_packet_destroy},
     {"packet_data", l_enet_packet_data},
     {"peer_send", l_enet_peer_send},
+    {"peer_reset", l_enet_peer_reset},
+    {"peer_disconnect", l_enet_peer_disconnect},
+    {"peer_set_data", l_enet_peer_set_data},   // Add set_data
+    {"peer_get_data", l_enet_peer_get_data},   // Add get_data
+    {"peer_get_connect_id", l_enet_peer_get_connect_id}, // Add get_connect_id
+
+    {"host_broadcast", l_enet_host_broadcast},         // Add broadcast
+
+    {"disconnect_later", l_enet_peer_disconnect_later}, // Add disconnect_later
     {NULL, NULL}
 };
 
@@ -284,13 +407,21 @@ static const luaL_Reg enet_funcs[] = {
 static const luaL_Reg enet_host_mt[] = {
     {"__gc", enet_host_gc},
     {"destroy", l_enet_host_destroy},  // Optional: Expose destroy as method
+    {"host_flush", l_enet_host_flush}, // Add host_flush
+    {"broadcast", l_enet_host_broadcast}, // Add broadcast method
     {NULL, NULL}
 };
 
 // Metatable for ENetPeer
 static const luaL_Reg enet_peer_mt[] = {
     {"__gc", enet_peer_gc},
-    {"send", l_enet_peer_send},  // Optional: Expose send as method
+    {"send", l_enet_peer_send},  // Optional: Expose send as 
+    {"reset", l_enet_peer_reset},         // Add reset method
+    {"set_data", l_enet_peer_set_data},   // Add set_data
+    {"get_data", l_enet_peer_get_data},   // Add get_data
+    {"peer_get_connect_id", l_enet_peer_get_connect_id}, // Add get_connect_id
+    {"disconnect", l_enet_peer_disconnect}, // Add disconnect method
+    {"disconnect_later", l_enet_peer_disconnect_later}, // Add disconnect_later
     {NULL, NULL}
 };
 
@@ -328,14 +459,30 @@ int luaopen_module_enet(lua_State *L) {
     lua_setfield(L, -2, "EVENT_TYPE_DISCONNECT");
     lua_pushinteger(L, ENET_EVENT_TYPE_RECEIVE);
     lua_setfield(L, -2, "EVENT_TYPE_RECEIVE");
+    lua_pushinteger(L, ENET_EVENT_TYPE_DISCONNECT_TIMEOUT);
+    lua_setfield(L, -2, "EVENT_TYPE_DISCONNECT_TIMEOUT");
 
     // Add common packet flags
     lua_pushinteger(L, ENET_PACKET_FLAG_RELIABLE);
     lua_setfield(L, -2, "PACKET_FLAG_RELIABLE");
-    // lua_pushinteger(L, ENET_PACKET_FLAG_UNRELIABLE);
-    // lua_setfield(L, -2, "PACKET_FLAG_UNRELIABLE");
+    lua_pushinteger(L, ENET_PACKET_FLAG_UNSEQUENCED);
+    lua_setfield(L, -2, "PACKET_FLAG_UNSEQUENCED");
     lua_pushinteger(L, ENET_PACKET_FLAG_NO_ALLOCATE);
     lua_setfield(L, -2, "PACKET_FLAG_NO_ALLOCATE");
+    lua_pushinteger(L, ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT);
+    lua_setfield(L, -2, "PACKET_FLAG_UNRELIABLE_FRAGMENT");
+    lua_pushinteger(L, ENET_PACKET_FLAG_UNTHROTTLED);
+    lua_setfield(L, -2, "PACKET_FLAG_UNTHROTTLED");
+    lua_pushinteger(L, ENET_PACKET_FLAG_SENT);
+    lua_setfield(L, -2, "PACKET_FLAG_SENT");
+
+    //enet version
+    lua_pushinteger(L, ENET_VERSION_MAJOR);
+    lua_setfield(L, -2, "VERSION_MAJOR");
+    lua_pushinteger(L, ENET_VERSION_MINOR);
+    lua_setfield(L, -2, "VERSION_MINOR");
+    lua_pushinteger(L, ENET_VERSION_PATCH);
+    lua_setfield(L, -2, "VERSION_PATCH");
 
     return 1;
 }

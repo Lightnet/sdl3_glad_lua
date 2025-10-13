@@ -398,6 +398,13 @@ static int sdl_get_current_gl_context(lua_State *L) {
     return 1;
 }
 
+// Lua: sdl.get_ticks() -> integer
+static int sdl_get_ticks(lua_State *L) {
+    Uint32 ticks = SDL_GetTicks();
+    lua_pushinteger(L, (lua_Integer)ticks);
+    return 1;
+}
+
 
 static const struct luaL_Reg sdl_lib[] = {
     {"init", sdl_init},
@@ -418,6 +425,7 @@ static const struct luaL_Reg sdl_lib[] = {
     {"get_window_size", sdl_get_window_size},
     {"get_window_id", sdl_get_window_id},
     {"delay", sdl_delay},
+    {"get_ticks", sdl_get_ticks},
 
     {"get_current_gl_context", sdl_get_current_gl_context},
 

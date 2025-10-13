@@ -4,8 +4,6 @@ local gl = require("module_gl")
 local imgui = require("module_imgui")
 local enet = require("module_enet")
 
-
-
 -- Initialize SDL with video and events subsystems
 local success, err = sdl.init(sdl.INIT_VIDEO + sdl.INIT_EVENTS)
 if not success then
@@ -14,7 +12,7 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 lua", 800, 600, sdl.WINDOW_OPENGL + sdl.WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 enet server lua", 800, 600, sdl.WINDOW_OPENGL + sdl.WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
@@ -46,11 +44,10 @@ enet.initialize()
 local host = enet.host_create({host = "127.0.0.1", port = 12345}, 32, 0, 0, 0)
 if not host then
     error("Failed to create server host")
+    server_status = "Off"
+else
+    server_status = "On"
 end
-server_status = "On"
-
-
-
 
 -- Initialize ImGui with sdl_window and gl_context
 success, err = imgui.init(window, gl_context)
@@ -61,20 +58,35 @@ if not success then
     return
 end
 
-local function removeFirstMatch(tbl, value)
-  for i, v in ipairs(tbl) do
-    if v == value then
-      table.remove(tbl, i)
-      return
-    end
-  end
-end
-
 -- Main loop
 local running = true
 local peer_id = nil
 
 local client_peers = {}
+local connection_times = {}
+
+local function generatePeerId()
+    -- Simple ID generator (replace with a more robust method if needed)
+    return tostring(math.random(1000000)) -- Unique string ID
+end
+
+local function removePeerById(id)
+    if id then
+        client_peers[id] = nil
+        connection_times[id] = nil
+        print("Removed peer with connectID:", id)
+    else
+        print("Warning: Attempted to remove peer with nil connectID")
+    end
+end
+
+local function countClients(tbl)
+    local count = 0
+    for _ in pairs(tbl) do
+        count = count + 1
+    end
+    return count
+end
 
 while running do
     -- Poll SDL events
@@ -91,21 +103,42 @@ while running do
     local event = enet.host_service(host, 0)  -- 1 second timeout
     if type(event) == "table" and event.type then
         if event.type == enet.EVENT_TYPE_CONNECT then
-            print("Client connected from:", event.peer)
-            table.insert(client_peers, event.peer) 
+            local connect_id = enet.peer_get_connect_id(event.peer)
+            if not connect_id then
+                print("Error: Failed to get connect ID for peer:", event.peer)
+                connect_id = tostring(math.random(1000000)) -- Fallback
+            end
+            print("[CONNECT] connect_id:", connect_id)
+            print("Client connected with connectID:", connect_id, "from:", event.peer)
+            client_peers[connect_id] = event.peer -- Update peer userdata
+            connection_times[connect_id] = sdl.get_ticks()
+
         elseif event.type == enet.EVENT_TYPE_DISCONNECT then
-            print("Client disconnected:", event.peer)
-            removeFirstMatch(client_peers, event.peer)
+            local connect_id = enet.peer_get_connect_id(event.peer)
+            if not connect_id then
+                print("Error: Failed to get connect ID for disconnecting peer:", event.peer)
+            else
+                print("[DISCONNECT] connect_id:", connect_id)
+                print("Client disconnected with connectID:", connect_id, "from:", event.peer, "duration:", connection_times[connect_id] and (sdl.get_ticks() - connection_times[connect_id]) or 0, "ms")
+                removePeerById(connect_id)
+            end
+
         elseif event.type == enet.EVENT_TYPE_RECEIVE then
+            local connect_id = enet.peer_get_connect_id(event.peer) or "unknown"
             local data = enet.packet_data(event.packet)
-            print("Received from", event.peer, ":", data)
+            print("Received from connectID:", connect_id, "peer:", event.peer, ":", data)
             print("event.channelID", event.channelID)
-            -- peer_id = event.peer
-            -- Echo back the message
+            -- Update peer userdata in client_peers
+            if connect_id ~= "unknown" then
+                client_peers[connect_id] = event.peer
+            end
             local echo_packet = enet.packet_create(data, enet.PACKET_FLAG_RELIABLE)
-            enet.peer_send(event.peer, event.channelID, echo_packet)
-            
-            -- Destroy the received packet (ENet owns it after service)
+            local result = enet.peer_send(event.peer, event.channelID, echo_packet)
+            if result == 0 then
+                print("Echoed packet to connectID:", connect_id)
+            else
+                print("Failed to echo packet to connectID:", connect_id, "error:", result)
+            end
             enet.packet_destroy(event.packet)
         end
     elseif event == 0 then
@@ -124,44 +157,30 @@ while running do
     local open = imgui.ig_begin("Test Window", true)
     if open then
         imgui.ig_text("Hello, ImGui from Lua!")
-        imgui.ig_text("Server:")
-        imgui.ig_text(server_status)
+        local text_server_status =  "Server:" .. server_status
+        imgui.ig_text(text_server_status)
+
+        imgui.ig_text("Clients: " .. tostring(countClients(client_peers)))
 
         if imgui.ig_button("client(s)") then
-            print("clients: ", #client_peers)
+            print("clients: ", countClients(client_peers))
         end
 
         if imgui.ig_button("ping") then
             print("ping!")
-            for _, peer_id in ipairs(client_peers) do
+            for connect_id, peer in pairs(client_peers) do
                 local packet = enet.packet_create("Hello, client!", enet.PACKET_FLAG_RELIABLE)
-                enet.peer_send(peer_id, 0, packet)    
+                local result = enet.peer_send(peer, 0, packet)
+                if result == 0 then
+                    print("Sent packet to connectID:", connect_id)
+                else
+                    print("Failed to send packet to connectID:", connect_id, "error:", result)
+                end
             end
-
-
-            -- just a test
-            -- if peer_id then
-            --     local packet = enet.packet_create("Hello, client!", enet.PACKET_FLAG_RELIABLE)
-            --     enet.peer_send(peer_id, 0, packet)
-            -- end
         end
 
 
-        -- if imgui.ig_button("Click Me") then
-        --     print("Button clicked!")
-        -- end
 
-        -- if imgui.ig_button("Window ID") then
-        --     local id = sdl.get_window_id(window)
-        --     local display_id = sdl.get_primary_display(window)
-        --     print("window id:", id)
-        --     print("display_id:", display_id)
-        -- end
-
-        -- if imgui.ig_button("get_current_gl_context") then
-        --     local context = sdl.get_current_gl_context()
-        --     print("context:", context)
-        -- end
 
         imgui.ig_end()
     end

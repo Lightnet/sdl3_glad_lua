@@ -12,7 +12,7 @@ if not success then
 end
 
 -- Create window with OpenGL and resizable flags
-local window, err = sdl.init_window("sdl3 lua", 800, 600, sdl.WINDOW_OPENGL + sdl.WINDOW_RESIZABLE)
+local window, err = sdl.init_window("sdl3 enet client lua", 800, 600, sdl.WINDOW_OPENGL + sdl.WINDOW_RESIZABLE)
 if not window then
     lua_util.log("Failed to create window: " .. err)
     sdl.quit()
@@ -36,7 +36,14 @@ print("gl_context: " .. tostring(gl_context))
 --     print("Failed to get GL context: ", select(2, gl.get_gl_context()))
 --     return
 -- end
+
+
 local connect_status = "None"
+local connected = false
+local peer = nil
+local connect_id = nil
+local last_reconnect = 0
+local reconnect_interval = 5000
 -- Initialize ENet
 enet.initialize()
 
@@ -46,16 +53,28 @@ if not host then
     error("Failed to create client host")
 end
 
--- Connect to server
--- local peer = enet.host_connect(host, {host = "localhost", port = 12345}, 0, 0)
-local peer = enet.host_connect(host, {host = "127.0.0.1", port = 12345}, 0, 0)
-if not peer then
-    connect_status = "Off"
-    error("Failed to connect")
-else
-    connect_status = "On"
+-- Function to attempt connection
+local function connect_to_server()
+    peer = enet.host_connect(host, {host = "127.0.0.1", port = 12345}, 0, 0)
+    if not peer then
+        connect_status = "Failed to connect"
+        return false
+    end
+    connect_status = "Connecting..."
+    connect_id = enet.peer_get_connect_id(peer)
+    if not connect_id then
+        print("Failed to get connect ID, using random ID")
+        connect_id = tostring(math.random(1000000))
+    end
+    print("Set client connectID:", connect_id)
+    enet.host_flush(host)
+    return true
 end
 
+-- Initial connection attempt
+if not connect_to_server() then
+    error("Initial connection failed")
+end
 
 -- Initialize ImGui with sdl_window and gl_context
 success, err = imgui.init(window, gl_context)
@@ -81,30 +100,49 @@ while running do
         end
     end
 
+    -- Automatic reconnection
+    if not connected and sdl.get_ticks() - last_reconnect > reconnect_interval then
+        if connect_to_server() then
+            print("Reconnection attempt started")
+        else
+            print("Reconnection failed")
+        end
+        last_reconnect = sdl.get_ticks()
+    end
 
+
+    -- Handle ENet events
     local event = enet.host_service(host, 0)
     if type(event) == "table" and event.type then
         if event.type == enet.EVENT_TYPE_CONNECT then
-            print("Connected to server!")
+             print("Connected to server! connectID:", connect_id)
+            connect_status = "Connected"
             connected = true
-            -- Send a message after connect
-            -- local packet = enet.packet_create("Hello, server TESTME XD!", enet.PACKET_FLAG_RELIABLE)
-            -- enet.peer_send(peer, 0, packet)
-            -- message_sent = true
+            local packet = enet.packet_create("Hello, server! connectID: " .. connect_id, enet.PACKET_FLAG_RELIABLE)
+            local result = enet.peer_send(peer, 0, packet)
+            if result == 0 then
+                print("Sent initial message")
+            else
+                print("Failed to send initial message:", result)
+            end
+            enet.host_flush(host)
         elseif event.type == enet.EVENT_TYPE_RECEIVE then
             local data = enet.packet_data(event.packet)
             print("Received from server:", data)
             enet.packet_destroy(event.packet)
-            -- break  -- Exit after receiving echo
         elseif event.type == enet.EVENT_TYPE_DISCONNECT then
-            print("Disconnected from server")
-            -- break
-            running = false
+            print("Disconnected from server. connectID:", connect_id)
+            connect_status = "Disconnected"
+            connected = false
+            peer = nil
+            connect_id = nil
         end
     elseif event ~= 0 then
         print("Service error:", event)
-        -- break
-        running = false
+        connect_status = "Service error"
+        connected = false
+        peer = nil
+        connect_id = nil
     end
 
     -- Start ImGui frame
@@ -115,30 +153,34 @@ while running do
     local open = imgui.ig_begin("Test Window", true)
     if open then
         imgui.ig_text("Hello, ImGui from Lua!")
-        imgui.ig_text("Client:")
-        imgui.ig_text(connect_status)
-
-        if imgui.ig_button("ping") then
-            local packet = enet.packet_create("Hello, server TESTME XD!", enet.PACKET_FLAG_RELIABLE)
-            enet.peer_send(peer, 0, packet)
+        imgui.ig_text("Client Status: " .. connect_status)
+        if peer_id then
+            imgui.ig_text("Peer ID: " .. peer_id)
         end
 
+        if imgui.ig_button("Ping") then
+             if connected and peer then
+                local packet = enet.packet_create("Ping from client! connectID: " .. connect_id, enet.PACKET_FLAG_RELIABLE)
+                local result = enet.peer_send(peer, 0, packet)
+                if result == 0 then
+                    print("Sent ping to server")
+                else
+                    print("Failed to send ping:", result)
+                end
+                enet.host_flush(host)
+            else
+                print("Cannot ping: Not connected")
+            end
+        end
 
-        -- if imgui.ig_button("Click Me") then
-        --     print("Button clicked!")
-        -- end
-
-        -- if imgui.ig_button("Window ID") then
-        --     local id = sdl.get_window_id(window)
-        --     local display_id = sdl.get_primary_display(window)
-        --     print("window id:", id)
-        --     print("display_id:", display_id)
-        -- end
-
-        -- if imgui.ig_button("get_current_gl_context") then
-        --     local context = sdl.get_current_gl_context()
-        --     print("context:", context)
-        -- end
+        if not connected and imgui.ig_button("Reconnect") then
+            if connect_to_server() then
+                print("Manual reconnection attempt started")
+            else
+                print("Manual reconnection failed")
+            end
+            last_reconnect = sdl.get_ticks()
+        end
 
         imgui.ig_end()
     end
@@ -156,8 +198,21 @@ while running do
 end
 
 -- Cleanup
-
-enet.host_service(host, 0)  -- Process disconnect event
+if peer and connected then
+    enet.peer_disconnect(peer, 0)
+    local timeout = 1000
+    local start = sdl.get_ticks()
+    while sdl.get_ticks() - start < timeout do
+        local event = enet.host_service(host, 0)
+        if type(event) == "table" and event.type == enet.EVENT_TYPE_DISCONNECT then
+            print("Graceful disconnect completed")
+            break
+        end
+        sdl.delay(10)
+    end
+end
+-- enet.peer_disconnect(peer, 0) -- disconnect
+-- enet.host_service(host, 0)  -- Process disconnect event, need to send to server
 enet.host_destroy(host)
 
 imgui.shutdown()
