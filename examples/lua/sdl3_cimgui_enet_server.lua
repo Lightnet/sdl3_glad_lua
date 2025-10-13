@@ -88,10 +88,10 @@ local function countClients(tbl)
     return count
 end
 
--- Configure throttling for new peers (example)
-local function configure_peer_throttling(peer)
-    print("configure_peer_throttling")
-    enet.peer_throttle_configure(peer, 1000, 1000, 1000) -- interval, acceleration, deceleration
+-- Configure peer settings
+local function configure_peer(peer)
+    enet.peer_throttle_configure(peer, 1000, 1000, 1000)
+    enet.peer_timeout(peer, 5, 5000, 10000) -- 5 missed packets, 5-10s timeout
 end
 
 while running do
@@ -121,7 +121,8 @@ while running do
             print("Client connected with connectID:", connect_id, "from:", event.peer)
             client_peers[connect_id] = event.peer
             connection_times[connect_id] = sdl.get_ticks()
-            configure_peer_throttling(event.peer)
+            configure_peer(event.peer)
+            enet.peer_ping(event.peer) -- Send initial ping
 
         elseif event.type == enet.EVENT_TYPE_DISCONNECT then
             local connect_id = enet.peer_get_connect_id(event.peer)
@@ -138,17 +139,31 @@ while running do
             local connect_id = enet.peer_get_connect_id(event.peer) or "unknown"
             local state = enet.peer_get_state(event.peer)
             local data = enet.packet_data(event.packet)
-            print("Received from connectID:", connect_id, "peer:", event.peer, "state:", state, ":", data)
+            if type(data) == "table" then
+                print("Received table from connectID:", connect_id, "peer:", event.peer, "state:", state)
+                for k, v in pairs(data) do
+                    print("  ", k, "=", v)
+                end
+                local echo_packet = enet.packet_create_table(data, enet.PACKET_FLAG_RELIABLE)
+                local result = enet.peer_send(event.peer, event.channelID, echo_packet)
+                if result == 0 then
+                    print("Echoed table packet to connectID:", connect_id)
+                else
+                    print("Failed to echo table packet to connectID:", connect_id, "error:", result)
+                end
+            else
+                print("Received string from connectID:", connect_id, "peer:", event.peer, "state:", state, ":", data)
+                local echo_packet = enet.packet_create_str(data, enet.PACKET_FLAG_RELIABLE)
+                local result = enet.peer_send(event.peer, event.channelID, echo_packet)
+                if result == 0 then
+                    print("Echoed string packet to connectID:", connect_id)
+                else
+                    print("Failed to echo string packet to connectID:", connect_id, "error:", result)
+                end
+            end
             print("event.channelID", event.channelID)
             if connect_id ~= "unknown" then
                 client_peers[connect_id] = event.peer
-            end
-            local echo_packet = enet.packet_create(data, enet.PACKET_FLAG_RELIABLE)
-            local result = enet.peer_send(event.peer, event.channelID, echo_packet)
-            if result == 0 then
-                print("Echoed packet to connectID:", connect_id)
-            else
-                print("Failed to echo packet to connectID:", connect_id, "error:", result)
             end
             enet.packet_destroy(event.packet)
         end
@@ -180,12 +195,19 @@ while running do
         if imgui.ig_button("ping") then
             print("ping!")
             for connect_id, peer in pairs(client_peers) do
-                local packet = enet.packet_create("Hello, client!", enet.PACKET_FLAG_RELIABLE)
-                local result = enet.peer_send(peer, 0, packet)
-                if result == 0 then
-                    print("Sent packet to connectID:", connect_id)
+                local state = enet.peer_get_state(peer)
+                if state == enet.PEER_STATE_CONNECTED then
+                    enet.peer_ping(peer)
+                    local data = {message = "Hello, client!", connect_id = tostring(connect_id), timestamp = sdl.get_ticks()}
+                    local packet = enet.packet_create_table(data, enet.PACKET_FLAG_RELIABLE)
+                    local result = enet.peer_send(peer, 0, packet)
+                    if result == 0 then
+                        print("Sent table packet to connectID:", connect_id)
+                    else
+                        print("Failed to send table packet to connectID:", connect_id, "error:", result)
+                    end
                 else
-                    print("Failed to send packet to connectID:", connect_id, "error:", result)
+                    print("Cannot ping connectID:", connect_id, "state:", state)
                 end
             end
         end

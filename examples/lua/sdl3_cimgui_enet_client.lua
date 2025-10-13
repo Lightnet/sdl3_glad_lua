@@ -119,19 +119,27 @@ while running do
             print("Connected to server! connectID:", connect_id, "incoming_peer_id:", incoming_id, "state:", state)
             connect_status = "Connected"
             connected = true
-            local packet = enet.packet_create("Hello, server! connectID: " .. connect_id, enet.PACKET_FLAG_RELIABLE)
+            local data = {message = "Hello, server!", connect_id = tostring(connect_id), timestamp = sdl.get_ticks()}
+            local packet = enet.packet_create_table(data, enet.PACKET_FLAG_RELIABLE)
             local result = enet.peer_send(peer, 0, packet)
             if result == 0 then
-                print("Sent initial message")
+                print("Sent initial table message")
             else
-                print("Failed to send initial message:", result)
+                print("Failed to send initial table message:", result)
             end
+            enet.peer_ping(peer)
             enet.host_flush(host)
-            enet.peer_throttle_configure(peer, 1000, 1000, 1000) -- Configure throttling
 
         elseif event.type == enet.EVENT_TYPE_RECEIVE then
             local data = enet.packet_data(event.packet)
-            print("Received from server:", data)
+            if type(data) == "table" then
+                print("Received table from server:")
+                for k, v in pairs(data) do
+                    print("  ", k, "=", v)
+                end
+            else
+                print("Received string from server:", data)
+            end
             enet.packet_destroy(event.packet)
 
         elseif event.type == enet.EVENT_TYPE_DISCONNECT then
@@ -177,6 +185,24 @@ while running do
                 print("Cannot ping: Not connected")
             end
         end
+
+        if imgui.ig_button("send table") then
+            if connected and peer then
+                enet.peer_ping(peer)
+                local data = {message = "Ping from client!", connect_id = tostring(connect_id), timestamp = sdl.get_ticks(),test="data"}
+                local packet = enet.packet_create_table(data, enet.PACKET_FLAG_RELIABLE)
+                local result = enet.peer_send(peer, 0, packet)
+                if result == 0 then
+                    print("Sent table ping to server")
+                else
+                    print("Failed to send table ping:", result)
+                end
+                enet.host_flush(host)
+            else
+                print("Cannot ping: Not connected")
+            end
+        end
+
 
         if not connected and imgui.ig_button("Reconnect") then
             if connect_to_server() then

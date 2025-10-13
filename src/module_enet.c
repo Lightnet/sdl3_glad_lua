@@ -11,6 +11,9 @@
 #define ENET_PACKET_MT "ENetPacket"
 #define ENET_PEER_REGISTRY "enet_peer_registry"
 
+// Table packet prefix
+#define TABLE_PACKET_PREFIX "TABLE:"
+
 // Helper to push ENetHost userdata
 static ENetHost** push_enet_host(lua_State *L) {
     ENetHost **host = (ENetHost**)lua_newuserdata(L, sizeof(ENetHost*));
@@ -308,6 +311,52 @@ static int l_enet_packet_create_str(lua_State *L) {
     return 1;
 }
 
+// enet.packet_create_table(table, flags)
+static int l_enet_packet_create_table(lua_State *L) {
+    luaL_checktype(L, 1, LUA_TTABLE);
+    enet_uint32 flags = (enet_uint32)luaL_optinteger(L, 2, ENET_PACKET_FLAG_RELIABLE);
+
+    luaL_Buffer b;
+    luaL_buffinit(L, &b);
+    luaL_addstring(&b, TABLE_PACKET_PREFIX); // Add prefix to identify table packets
+    lua_pushnil(L); // Start table iteration
+    while (lua_next(L, 1)) {
+        // Key at -2, value at -1
+        if (lua_isstring(L, -2)) {
+            size_t key_len;
+            const char *key = lua_tolstring(L, -2, &key_len);
+            luaL_addlstring(&b, key, key_len);
+            luaL_addstring(&b, "=");
+        } else {
+            luaL_error(L, "enet.packet_create_table: Table keys must be strings");
+            return 0;
+        }
+        if (lua_isstring(L, -1) || lua_isnumber(L, -1)) {
+            size_t val_len;
+            const char *val = lua_tolstring(L, -1, &val_len);
+            luaL_addlstring(&b, val, val_len);
+        } else {
+            luaL_error(L, "enet.packet_create_table: Table values must be strings or numbers");
+            return 0;
+        }
+        luaL_addstring(&b, ";");
+        lua_pop(L, 1); // Pop value, keep key for next iteration
+    }
+    luaL_pushresult(&b); // Finalize buffer and push string to stack
+    size_t data_len;
+    const char *data = lua_tolstring(L, -1, &data_len); // Get final string
+    ENetPacket *packet = enet_packet_create(data, data_len, flags);
+    lua_pop(L, 1); // Remove buffer string from stack
+    if (packet == NULL) {
+        fprintf(stderr, "enet.packet_create_table: Failed to create packet\n");
+        lua_pushnil(L);
+    } else {
+        ENetPacket **ud = push_enet_packet(L);
+        *ud = packet;
+    }
+    return 1;
+}
+
 // enet.packet_destroy(packet)
 static int l_enet_packet_destroy(lua_State *L) {
     ENetPacket **packet = (ENetPacket**)luaL_checkudata(L, 1, ENET_PACKET_MT);
@@ -321,11 +370,39 @@ static int l_enet_packet_destroy(lua_State *L) {
 // enet.packet_data(packet)
 static int l_enet_packet_data(lua_State *L) {
     ENetPacket **packet = (ENetPacket**)luaL_checkudata(L, 1, ENET_PACKET_MT);
-    if (packet && *packet && (*packet)->data) {
-        lua_pushlstring(L, (const char*)(*packet)->data, (*packet)->dataLength);
-    } else {
+    if (!packet || !*packet || !(*packet)->data) {
         fprintf(stderr, "enet.packet_data: Invalid packet or no data\n");
         lua_pushnil(L);
+        return 1;
+    }
+
+    // Check if packet is a table (starts with TABLE_PACKET_PREFIX)
+    size_t prefix_len = strlen(TABLE_PACKET_PREFIX);
+    if ((*packet)->dataLength >= prefix_len &&
+        strncmp((const char*)(*packet)->data, TABLE_PACKET_PREFIX, prefix_len) == 0) {
+        // Parse as table
+        lua_newtable(L);
+        const char *data = (const char*)(*packet)->data + prefix_len;
+        size_t data_len = (*packet)->dataLength - prefix_len;
+        const char *p = data;
+        const char *end = data + data_len;
+        while (p < end) {
+            const char *key_start = p;
+            while (p < end && *p != '=') p++;
+            if (p >= end || *p != '=') break;
+            size_t key_len = p - key_start;
+            p++;
+            const char *val_start = p;
+            while (p < end && *p != ';') p++;
+            size_t val_len = p - val_start;
+            lua_pushlstring(L, key_start, key_len);
+            lua_pushlstring(L, val_start, val_len);
+            lua_settable(L, -3);
+            if (p < end && *p == ';') p++;
+        }
+    } else {
+        // Return as string
+        lua_pushlstring(L, (const char*)(*packet)->data, (*packet)->dataLength);
     }
     return 1;
 }
@@ -601,6 +678,7 @@ static const luaL_Reg enet_funcs[] = {
     {"host_bandwidth_limit", l_enet_host_bandwidth_limit},
     {"packet_create", l_enet_packet_create},
     {"packet_create_str", l_enet_packet_create_str},
+    {"packet_create_table", l_enet_packet_create_table},
     {"packet_destroy", l_enet_packet_destroy},
     {"packet_data", l_enet_packet_data},
     {"peer_send", l_enet_peer_send},
