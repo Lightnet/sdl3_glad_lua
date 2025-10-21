@@ -318,9 +318,16 @@ static int gl_tex_image_2d(lua_State *L) {
     GLint border = (GLint)luaL_checkinteger(L, 6);
     GLenum format = (GLenum)luaL_checkinteger(L, 7);
     GLenum type = (GLenum)luaL_checkinteger(L, 8);
-    void *data = lua_touserdata(L, 9);
+    void *data = lua_isnil(L, 9) ? NULL : lua_touserdata(L, 9);
     glTexImage2D(target, level, internal_format, width, height, border, format, type, data);
-    return 0;
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        lua_pushnil(L);
+        lua_pushfstring(L, "OpenGL error in glTexImage2D: %d", err);
+        return 2;
+    }
+    lua_pushboolean(L, 1);
+    return 1;
 }
 
 // Lua: gl.tex_parameter_i(target, pname, param)
@@ -558,6 +565,14 @@ static int gl_polygon_mode(lua_State *L) {
     return push_gl_error(L, "glPolygonMode");
 }
 
+static int gl_get_integer(lua_State *L) {
+    GLenum pname = (GLenum)luaL_checkinteger(L, 1);
+    GLint value;
+    glGetIntegerv(pname, &value);
+    lua_pushinteger(L, value);
+    return 1;
+}
+
 static const struct luaL_Reg gl_lib[] = {
     {"init", gl_init},
     {"destroy", gl_destroy},
@@ -607,6 +622,7 @@ static const struct luaL_Reg gl_lib[] = {
     {"delete_vertex_arrays", gl_delete_vertex_arrays},
     {"cull_face", gl_cull_face},
     {"polygon_mode", gl_polygon_mode},
+    {"get_integer", gl_get_integer},
 
     
     {NULL, NULL}
@@ -658,7 +674,8 @@ int luaopen_module_gl(lua_State *L) {
     lua_pushinteger(L, GL_LINE); lua_setfield(L, -2, "LINE");
     lua_pushinteger(L, GL_LESS); lua_setfield(L, -2, "LESS");
     lua_pushinteger(L, GL_FRONT); lua_setfield(L, -2, "FRONT");
-
+    lua_pushinteger(L, GL_TEXTURE_BINDING_2D); lua_setfield(L, -2, "TEXTURE_BINDING_2D");
+    lua_pushinteger(L, GL_NO_ERROR); lua_setfield(L, -2, "NO_ERROR");
     
     return 1;
 }

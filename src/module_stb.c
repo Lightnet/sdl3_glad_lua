@@ -1,4 +1,4 @@
-// module_stb.c
+// module_stb.c (relevant parts only)
 #include "module_stb.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -8,30 +8,75 @@
 #include <lua.h>
 #include <lualib.h>
 
-// Lua: stb.load_image(file_path) -> data, width, height, channels, err_msg
+
+static const char *STB_FONT_MT = "stb_font";
+static const char *STB_IMAGE_MT = "stb_image";
+
+typedef struct {
+    unsigned char *ttf_buffer;
+    unsigned char *bitmap;
+    stbtt_bakedchar *cdata;
+    int width;
+    int height;
+    int first_char;
+    int num_chars;
+} stb_font;
+
+typedef struct {
+    unsigned char *data;
+    int width;
+    int height;
+    int channels;
+} stb_image;
+
+//===============================================
+// image
+//===============================================
+
+/*
+local img, err = stb.load_image("resources/ph16.png", stb.RGBA)
+if not img then
+    lua_util.log("Failed to load image: " .. err)
+    gl.destroy()
+    sdl.quit()
+    return
+end
+local image_data = img:get_data()
+local width = img:get_width()
+local height = img:get_height()
+local channels = img:get_channels()
+*/
+
+// Lua: stb.load_image(file_path, [desired_channels]) -> image | nil, err_msg
 static int stb_load_image(lua_State *L) {
     const char *file_path = luaL_checkstring(L, 1);
-    
+    int desired_channels = (int)luaL_optinteger(L, 2, 0); // 0 means use file's channels
     int width, height, channels;
-    unsigned char *data = stbi_load(file_path, &width, &height, &channels, 0);
-    
+    unsigned char *data = stbi_load(file_path, &width, &height, &channels, desired_channels);
     if (!data) {
         lua_pushnil(L);
-        lua_pushinteger(L, 0);
-        lua_pushinteger(L, 0);
-        lua_pushinteger(L, 0);
-        lua_pushstring(L, stbi_failure_reason());
-        return 5;
+        lua_pushstring(L, stbi_failure_reason() ? stbi_failure_reason() : "Unknown error loading image");
+        return 2;
     }
-    
-    lua_pushlightuserdata(L, data);
-    lua_pushinteger(L, width);
-    lua_pushinteger(L, height);
-    lua_pushinteger(L, channels);
-    return 4;
+    stb_image *img = (stb_image *)lua_newuserdata(L, sizeof(stb_image));
+    img->data = data;
+    img->width = width;
+    img->height = height;
+    img->channels = desired_channels ? desired_channels : channels;
+    luaL_setmetatable(L, STB_IMAGE_MT);
+    return 1;
 }
 
-// Lua: stb.free_image(data)
+// Lua: image:free()
+static int stb_image_free(lua_State *L) {
+    stb_image *img = (stb_image *)luaL_checkudata(L, 1, STB_IMAGE_MT);
+    if (img->data) {
+        stbi_image_free(img->data);
+        img->data = NULL; // Prevent double-free
+    }
+    return 0;
+}
+
 static int stb_free_image(lua_State *L) {
     void *data = lua_touserdata(L, 1);
     if (data) {
@@ -40,295 +85,213 @@ static int stb_free_image(lua_State *L) {
     return 0;
 }
 
-// Lua: stb.load_font(filename) -> font_data, size, err_msg
-static int stb_load_font(lua_State *L) {
-    const char *filename = luaL_checkstring(L, 1);
-    FILE *file = fopen(filename, "rb");
-    if (!file) {
+static int stb_image_get_data(lua_State *L) {
+    stb_image *img = (stb_image *)luaL_checkudata(L, 1, STB_IMAGE_MT);
+    if (!img->data) {
         lua_pushnil(L);
-        lua_pushstring(L, "Failed to open font file");
-        return 2;
+        return 1;
     }
-
-    fseek(file, 0, SEEK_END);
-    size_t size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    unsigned char *font_data = (unsigned char *)malloc(size);
-    if (!font_data) {
-        fclose(file);
-        lua_pushnil(L);
-        lua_pushstring(L, "Failed to allocate memory for font");
-        return 2;
-    }
-
-    fread(font_data, 1, size, file);
-    fclose(file);
-
-    unsigned char **ud = (unsigned char **)lua_newuserdata(L, sizeof(unsigned char *));
-    *ud = font_data;
-    luaL_getmetatable(L, "stb.font");
-    lua_setmetatable(L, -2);
-    lua_pushinteger(L, size);
-    return 2;
-}
-
-// Lua: stb.font.__gc
-static int stb_font_gc(lua_State *L) {
-    unsigned char **ud = (unsigned char **)luaL_checkudata(L, 1, "stb.font");
-    if (*ud) {
-        free(*ud);
-        *ud = NULL;
-    }
-    return 0;
-}
-
-// Lua: stb.bake_font(font_data, font_size, bitmap_width, bitmap_height) -> bitmap, cdata, bitmap_width, bitmap_height
-static int stb_bake_font(lua_State *L) {
-    unsigned char **font_data = (unsigned char **)luaL_checkudata(L, 1, "stb.font");
-    float font_size = (float)luaL_checknumber(L, 2);
-    int bitmap_width = (int)luaL_checkinteger(L, 3);
-    int bitmap_height = (int)luaL_checkinteger(L, 4);
-
-    unsigned char *bitmap = (unsigned char *)calloc(bitmap_width * bitmap_height, 1);
-    if (!bitmap) {
-        lua_pushnil(L);
-        lua_pushnil(L);
-        lua_pushinteger(L, 0);
-        lua_pushinteger(L, 0);
-        lua_pushstring(L, "Failed to allocate bitmap");
-        return 5;
-    }
-
-    stbtt_bakedchar *cdata = (stbtt_bakedchar *)malloc(96 * sizeof(stbtt_bakedchar));
-    if (!cdata) {
-        free(bitmap);
-        lua_pushnil(L);
-        lua_pushnil(L);
-        lua_pushinteger(L, 0);
-        lua_pushinteger(L, 0);
-        lua_pushstring(L, "Failed to allocate cdata");
-        return 5;
-    }
-
-    int result = stbtt_BakeFontBitmap(*font_data, 0, font_size, bitmap, bitmap_width, bitmap_height, 32, 96, cdata);
-    if (result < 0) {
-        free(bitmap);
-        free(cdata);
-        lua_pushnil(L);
-        lua_pushnil(L);
-        lua_pushinteger(L, 0);
-        lua_pushinteger(L, 0);
-        lua_pushstring(L, "Failed to bake font");
-        return 5;
-    }
-
-    lua_pushlightuserdata(L, bitmap);
-    lua_pushlightuserdata(L, cdata);
-    lua_pushinteger(L, bitmap_width);
-    lua_pushinteger(L, bitmap_height);
-    return 4;
-}
-
-// Lua: stb.free_bitmap(bitmap)
-static int stb_free_bitmap(lua_State *L) {
-    void *bitmap = lua_touserdata(L, 1);
-    if (bitmap) {
-        free(bitmap);
-    }
-    return 0;
-}
-
-// Lua: stb.free_cdata(cdata)
-static int stb_free_cdata(lua_State *L) {
-    void *cdata = lua_touserdata(L, 1);
-    if (cdata) {
-        free(cdata);
-    }
-    return 0;
-}
-
-// Lua: stb.get_baked_quad(cdata, bitmap_width, bitmap_height, char, x, y) -> x0, y0, x1, y1, s0, t0, s1, t1, x_advance
-static int stb_get_baked_quad(lua_State *L) {
-    stbtt_bakedchar *cdata = (stbtt_bakedchar *)lua_touserdata(L, 1);
-    int bitmap_width = (int)luaL_checkinteger(L, 2);
-    int bitmap_height = (int)luaL_checkinteger(L, 3);
-    int char_code = (int)luaL_checkinteger(L, 4);
-    float x = (float)luaL_checknumber(L, 5);
-    float y = (float)luaL_checknumber(L, 6);
-    
-    stbtt_aligned_quad q;
-    float xpos = x;
-    float ypos = y;
-    
-    stbtt_GetBakedQuad(cdata, bitmap_width, bitmap_height, char_code - 32, &xpos, &ypos, &q, 1);
-    
-    lua_pushnumber(L, q.x0);
-    lua_pushnumber(L, q.y0);
-    lua_pushnumber(L, q.x1);
-    lua_pushnumber(L, q.y1);
-    lua_pushnumber(L, q.s0);
-    lua_pushnumber(L, q.t0);
-    lua_pushnumber(L, q.s1);
-    lua_pushnumber(L, q.t1);
-    lua_pushnumber(L, xpos - x); // x_advance
-    return 9;
-}
-
-// Lua: stb.get_font_vmetrics(font_data) -> ascent, descent, lineGap
-static int stb_get_font_vmetrics(lua_State *L) {
-    unsigned char **font_data = (unsigned char **)luaL_checkudata(L, 1, "stb.font");
-    stbtt_fontinfo font;
-    if (!stbtt_InitFont(&font, *font_data, stbtt_GetFontOffsetForIndex(*font_data, 0))) {
-        lua_pushnil(L);
-        lua_pushnil(L);
-        lua_pushnil(L);
-        lua_pushstring(L, "Failed to initialize font");
-        return 4;
-    }
-    int ascent, descent, lineGap;
-    stbtt_GetFontVMetrics(&font, &ascent, &descent, &lineGap);
-    lua_pushinteger(L, ascent);
-    lua_pushinteger(L, descent);
-    lua_pushinteger(L, lineGap);
-    return 3;
-}
-
-// Lua: stb.test_render_text(font_data, font_size, width, height, text)
-static int stb_test_render_text(lua_State *L) {
-    unsigned char **font_data = (unsigned char **)luaL_checkudata(L, 1, "stb.font");
-    float font_size = (float)luaL_checknumber(L, 2);
-    int width = (int)luaL_checkinteger(L, 3);
-    int height = (int)luaL_checkinteger(L, 4);
-    const char *text = luaL_checkstring(L, 5);
-
-    stbtt_fontinfo font;
-    if (!stbtt_InitFont(&font, *font_data, stbtt_GetFontOffsetForIndex(*font_data, 0))) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Failed to initialize font");
-        return 2;
-    }
-
-    float scale = stbtt_ScaleForPixelHeight(&font, font_size);
-    int ascent, descent, line_gap;
-    stbtt_GetFontVMetrics(&font, &ascent, &descent, &line_gap);
-    float xpos = 2;
-    float ypos = 2 + ascent * scale;
-    int max_width = 0;
-
-    unsigned char *bitmap = (unsigned char *)calloc(width * height, 1);
-    if (!bitmap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Failed to allocate bitmap");
-        return 2;
-    }
-
-    for (const char *c = text; *c; c++) {
-        int advance, lsb, x0, y0, x1, y1;
-        stbtt_GetCodepointHMetrics(&font, *c, &advance, &lsb);
-        stbtt_GetCodepointBitmapBox(&font, *c, scale, scale, &x0, &y0, &x1, &y1);
-        
-        int w = x1 - x0;
-        int h = y1 - y0;
-        if (xpos + w < width && ypos + h < height) {
-            stbtt_MakeCodepointBitmap(&font, bitmap + (int)ypos * width + (int)xpos + x0, w, h, width, scale, scale, *c);
-            printf("Test rendered char '%c': x0=%d, y0=%d, w=%d, h=%d, xpos=%.2f, ypos=%.2f\n", *c, x0, y0, w, h, xpos, ypos);
-        }
-        xpos += advance * scale;
-        if (xpos > max_width) max_width = xpos;
-    }
-
-    int non_zero_pixels = 0;
-    int min_pixel = 255, max_pixel = 0;
-    for (int i = 0; i < width * height; i++) {
-        if (bitmap[i] > 0) non_zero_pixels++;
-        if (bitmap[i] < min_pixel) min_pixel = bitmap[i];
-        if (bitmap[i] > max_pixel) max_pixel = bitmap[i];
-    }
-    printf("Test bitmap: %d non-zero pixels out of %d, min_pixel=%d, max_pixel=%d\n", 
-           non_zero_pixels, width * height, min_pixel, max_pixel);
-
-    printf("Sample 5x5 bitmap region (x=10, y=10):\n");
-    for (int y = 10; y < 15; y++) {
-        printf("Row %d: ", y);
-        for (int x = 10; x < 15; x++) {
-            int idx = y * width + x;
-            printf("%3d ", idx < width * height ? bitmap[idx] : 0);
-        }
-        printf("\n");
-    }
-
-    free(bitmap);
-    lua_pushboolean(L, 1);
+    // printf("Image data: first 4 bytes: %d, %d, %d, %d\n",
+    //        img->data[0], img->data[1], img->data[2], img->data[3]);
+    lua_pushlightuserdata(L, img->data);
     return 1;
 }
 
-// Lua: stb.dump_bitmap(bitmap, width, height)
-static int stb_dump_bitmap(lua_State *L) {
-    unsigned char *bitmap = (unsigned char *)lua_touserdata(L, 1);
-    int width = (int)luaL_checkinteger(L, 2);
-    int height = (int)luaL_checkinteger(L, 3);
-
-    if (!bitmap) {
-        lua_pushnil(L);
-        lua_pushstring(L, "Invalid bitmap");
-        return 2;
-    }
-
-    int non_zero_pixels = 0;
-    int min_pixel = 255, max_pixel = 0;
-    for (int i = 0; i < width * height; i++) {
-        if (bitmap[i] > 0) non_zero_pixels++;
-        if (bitmap[i] < min_pixel) min_pixel = bitmap[i];
-        if (bitmap[i] > max_pixel) max_pixel = bitmap[i];
-    }
-    printf("Dumped bitmap: %d non-zero pixels out of %d, min_pixel=%d, max_pixel=%d\n", 
-           non_zero_pixels, width * height, min_pixel, max_pixel);
-
-    printf("Sample 5x5 bitmap region (x=2, y=27):\n");
-    for (int y = 27; y < 32; y++) {
-        printf("Row %d: ", y);
-        for (int x = 2; x < 7; x++) {
-            int idx = y * width + x;
-            printf("%3d ", idx < width * height ? bitmap[idx] : 0);
-        }
-        printf("\n");
-    }
-
-    lua_pushboolean(L, 1);
+// Lua: image.width, image.height, image.channels (accessors)
+static int stb_image_get_width(lua_State *L) {
+    stb_image *img = (stb_image *)luaL_checkudata(L, 1, STB_IMAGE_MT);
+    lua_pushinteger(L, img->width);
     return 1;
 }
 
-static const struct luaL_Reg stb_lib[] = {
-    {"load_image", stb_load_image},
-    {"free_image", stb_free_image},
-    {"load_font", stb_load_font},
-    {"bake_font", stb_bake_font},
-    {"free_bitmap", stb_free_bitmap},
-    {"free_cdata", stb_free_cdata},
-    {"get_baked_quad", stb_get_baked_quad},
-    {"get_font_vmetrics", stb_get_font_vmetrics}, // Added
-    {"test_render_text", stb_test_render_text},
-    {"dump_bitmap", stb_dump_bitmap},
+static int stb_image_get_height(lua_State *L) {
+    stb_image *img = (stb_image *)luaL_checkudata(L, 1, STB_IMAGE_MT);
+    lua_pushinteger(L, img->height);
+    return 1;
+}
+
+static int stb_image_get_channels(lua_State *L) {
+    stb_image *img = (stb_image *)luaL_checkudata(L, 1, STB_IMAGE_MT);
+    lua_pushinteger(L, img->channels);
+    return 1;
+}
+
+static const luaL_Reg stb_image_methods[] = {
+    {"free", stb_image_free},
+    {"get_data", stb_image_get_data},
+    {"get_width", stb_image_get_width},
+    {"get_height", stb_image_get_height},
+    {"get_channels", stb_image_get_channels},
     {NULL, NULL}
 };
 
-static const luaL_Reg stb_font_meta[] = {
-    {"__gc", stb_font_gc},
+//===============================================
+// typefont
+//===============================================
+
+static int stb_bake_font(lua_State *L) {
+    const char *filename = luaL_checkstring(L, 1);
+    float pixel_height = (float)luaL_checknumber(L, 2);
+    int bitmap_width = (int)luaL_checkinteger(L, 3);
+    int bitmap_height = (int)luaL_checkinteger(L, 4);
+    int first_char = (int)luaL_optinteger(L, 5, 32);
+    int num_chars = (int)luaL_optinteger(L, 6, 96);
+
+    FILE *f = fopen(filename, "rb");
+    if (!f) {
+        return luaL_error(L, "Failed to open font file: %s", filename);
+    }
+
+    fseek(f, 0, SEEK_END);
+    long file_size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    unsigned char *ttf_buffer = (unsigned char *)malloc(file_size);
+    if (!ttf_buffer) {
+        fclose(f);
+        return luaL_error(L, "Memory allocation failed for TTF buffer");
+    }
+
+    if (fread(ttf_buffer, 1, file_size, f) != (size_t)file_size) {
+        free(ttf_buffer);
+        fclose(f);
+        return luaL_error(L, "Failed to read font file");
+    }
+    fclose(f);
+
+    unsigned char *bitmap = (unsigned char *)calloc(bitmap_width * bitmap_height, sizeof(unsigned char));
+    if (!bitmap) {
+        free(ttf_buffer);
+        return luaL_error(L, "Memory allocation failed for bitmap");
+    }
+
+    stbtt_bakedchar *cdata = (stbtt_bakedchar *)malloc(num_chars * sizeof(stbtt_bakedchar));
+    if (!cdata) {
+        free(bitmap);
+        free(ttf_buffer);
+        return luaL_error(L, "Memory allocation failed for cdata");
+    }
+
+    int bake_result = stbtt_BakeFontBitmap(ttf_buffer, 0, pixel_height, bitmap, bitmap_width, bitmap_height, first_char, num_chars, cdata);
+    if (bake_result <= 0) {
+        free(cdata);
+        free(bitmap);
+        free(ttf_buffer);
+        return luaL_error(L, "stbtt_BakeFontBitmap failed with code: %d", bake_result);
+    }
+
+    stb_font *font = (stb_font *)lua_newuserdata(L, sizeof(stb_font));
+    font->ttf_buffer = ttf_buffer;
+    font->bitmap = bitmap;
+    font->cdata = cdata;
+    font->width = bitmap_width;
+    font->height = bitmap_height;
+    font->first_char = first_char;
+    font->num_chars = num_chars;
+
+    luaL_setmetatable(L, STB_FONT_MT);
+
+    return 1;
+}
+
+static int stb_font_gc(lua_State *L) {
+    stb_font *font = (stb_font *)luaL_checkudata(L, 1, STB_FONT_MT);
+    if (font->ttf_buffer) free(font->ttf_buffer);
+    if (font->bitmap) free(font->bitmap);
+    if (font->cdata) free(font->cdata);
+    return 0;
+}
+
+static int stb_font_get_bitmap(lua_State *L) {
+    stb_font *font = (stb_font *)luaL_checkudata(L, 1, STB_FONT_MT);
+    lua_pushlstring(L, (const char *)font->bitmap, font->width * font->height);
+    lua_pushinteger(L, font->width);
+    lua_pushinteger(L, font->height);
+    return 3;
+}
+
+static int stb_font_get_baked_quad(lua_State *L) {
+    stb_font *font = (stb_font *)luaL_checkudata(L, 1, STB_FONT_MT);
+    int char_code = (int)luaL_checkinteger(L, 2);
+    float xpos = (float)luaL_checknumber(L, 3);
+    float ypos = (float)luaL_checknumber(L, 4);
+
+    int char_index = char_code - font->first_char;
+    if (char_index < 0 || char_index >= font->num_chars) {
+        return luaL_error(L, "Character code out of baked range");
+    }
+
+    stbtt_aligned_quad q;
+    stbtt_GetBakedQuad(&font->cdata[char_index], font->width, font->height, 0, &xpos, &ypos, &q, 1);
+
+    lua_newtable(L);
+    lua_pushstring(L, "x0"); lua_pushnumber(L, q.x0); lua_settable(L, -3);
+    lua_pushstring(L, "y0"); lua_pushnumber(L, q.y0); lua_settable(L, -3);
+    lua_pushstring(L, "x1"); lua_pushnumber(L, q.x1); lua_settable(L, -3);
+    lua_pushstring(L, "y1"); lua_pushnumber(L, q.y1); lua_settable(L, -3);
+    lua_pushstring(L, "s0"); lua_pushnumber(L, q.s0); lua_settable(L, -3);
+    lua_pushstring(L, "t0"); lua_pushnumber(L, q.t0); lua_settable(L, -3);
+    lua_pushstring(L, "s1"); lua_pushnumber(L, q.s1); lua_settable(L, -3);
+    lua_pushstring(L, "t1"); lua_pushnumber(L, q.t1); lua_settable(L, -3);
+
+    lua_pushnumber(L, xpos);
+    lua_pushnumber(L, ypos);
+
+    return 3;
+}
+
+
+static const luaL_Reg stb_font_methods[] = {
+    {"get_bitmap", stb_font_get_bitmap},
+    {"get_baked_quad", stb_font_get_baked_quad},
+    {NULL, NULL}
+};
+
+void init_stb_font_metatable(lua_State *L) {
+    luaL_newmetatable(L, STB_FONT_MT);
+    lua_pushstring(L, "__gc");
+    lua_pushcfunction(L, stb_font_gc);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "__index");
+    lua_newtable(L);
+    luaL_setfuncs(L, stb_font_methods, 0);
+    lua_settable(L, -3);
+
+    lua_pop(L, 1); // pop metatable
+}
+
+void init_stb_image_metatable(lua_State *L) {
+    luaL_newmetatable(L, STB_IMAGE_MT);
+    lua_pushstring(L, "__gc");
+    lua_pushcfunction(L, stb_image_free);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "__index");
+    lua_newtable(L);
+    luaL_setfuncs(L, stb_image_methods, 0);
+    lua_settable(L, -3);
+
+    lua_pop(L, 1); // pop metatable
+}
+
+static const luaL_Reg stb_lib[] = {
+    {"load_image", stb_load_image},
+    {"free_image", stb_free_image},
+    {"bake_font", stb_bake_font},
     {NULL, NULL}
 };
 
 int luaopen_module_stb(lua_State *L) {
     luaL_newlib(L, stb_lib);
-    
-    luaL_newmetatable(L, "stb.font");
-    luaL_setfuncs(L, stb_font_meta, 0);
-    lua_pop(L, 1);
-    
+
+    init_stb_font_metatable(L);
+    init_stb_image_metatable(L);
+
     lua_pushinteger(L, 1); lua_setfield(L, -2, "GREY");
     lua_pushinteger(L, 2); lua_setfield(L, -2, "GREY_ALPHA");
     lua_pushinteger(L, 3); lua_setfield(L, -2, "RGB");
     lua_pushinteger(L, 4); lua_setfield(L, -2, "RGBA");
-    
+
     return 1;
 }

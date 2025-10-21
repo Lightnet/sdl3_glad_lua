@@ -212,9 +212,7 @@ while running do
             end
         end
 
-
-
-
+        
         imgui.ig_end()
     end
     imgui.render() -- end drawing imgui

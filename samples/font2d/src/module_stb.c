@@ -137,14 +137,7 @@ static const luaL_Reg stb_font_methods[] = {
     {NULL, NULL}
 };
 
-static const luaL_Reg stb_lib[] = {
-    {"bake_font", stb_bake_font},
-    {NULL, NULL}
-};
-
-int luaopen_module_stb(lua_State *L) {
-    luaL_newlib(L, stb_lib);
-
+void init_stb_font_metatable(lua_State *L){
     luaL_newmetatable(L, STB_FONT_MT);
     lua_pushstring(L, "__gc");
     lua_pushcfunction(L, stb_font_gc);
@@ -156,6 +149,18 @@ int luaopen_module_stb(lua_State *L) {
     lua_settable(L, -3);
 
     lua_pop(L, 1); // pop metatable
+}
+
+static const luaL_Reg stb_lib[] = {
+    {"bake_font", stb_bake_font},
+    {NULL, NULL}
+};
+
+int luaopen_module_stb(lua_State *L) {
+    luaL_newlib(L, stb_lib);
+
+    init_stb_font_metatable(L);
 
     return 1;
 }
+

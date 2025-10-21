@@ -46,7 +46,6 @@ local last_reconnect = 0
 local reconnect_interval = 5000
 -- Initialize ENet
 enet.initialize()
-
 -- Create client host (single peer, no bandwidth limits)
 local host = enet.host_create({}, 1, 0, 0, 0)
 if not host then

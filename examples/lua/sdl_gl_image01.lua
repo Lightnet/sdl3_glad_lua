@@ -1,4 +1,4 @@
--- sdl_gl_image.lua
+-- sdl_gl_image01.lua
 
 local sdl = require("module_sdl")
 local gl = require("module_gl")
@@ -22,7 +22,7 @@ if not window then
 end
 
 -- Initialize OpenGL
-local gl_context, success, err = gl.init(window)
+local success, gl_context, err = gl.init(window)
 if not success then
     lua_util.log("Failed to initialize OpenGL: " .. err)
     gl.destroy()
@@ -33,22 +33,43 @@ print("success: " .. tostring(success))
 print("gl_context: " .. tostring(gl_context))
 
 -- Load image
-local image_data, width, height, channels, err = stb.load_image("resources/ph16.png")
-if not image_data then
+local img, err = stb.load_image("resources/ph16.png", stb.RGBA)
+if not img then
     lua_util.log("Failed to load image: " .. err)
     gl.destroy()
     sdl.quit()
     return
 end
+local image_data = img:get_data()
+local width = img:get_width()
+local height = img:get_height()
+local channels = img:get_channels()
+print("Image data size: " .. (width * height * channels) .. ", expected: " .. (width * height * channels))
 
 -- Create and set up texture
 local texture = gl.gen_textures()
+gl.active_texture(gl.TEXTURE0)
 gl.bind_texture(gl.TEXTURE_2D, texture)
 gl.tex_parameter_i(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
 gl.tex_parameter_i(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+gl.tex_parameter_i(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+gl.tex_parameter_i(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 local format = channels == 4 and gl.RGBA or gl.RGB
-gl.tex_image_2d(gl.TEXTURE_2D, 0, format, width, height, 0, format, gl.UNSIGNED_BYTE, image_data)
-stb.free_image(image_data) -- Free image data after uploading to GPU
+local tex_success, tex_err = gl.tex_image_2d(gl.TEXTURE_2D, 0, format, width, height, 0, format, gl.UNSIGNED_BYTE, image_data)
+if not tex_success then
+    lua_util.log("OpenGL error after glTexImage2D: " .. tex_err)
+    img:free()
+    gl.destroy()
+    sdl.quit()
+    return
+end
+img:free() -- Free image data after uploading to GPU
+
+-- Enable blending for alpha (if RGBA)
+if channels == 4 then
+    gl.enable(gl.BLEND)
+    gl.blend_func(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+end
 
 -- Vertex Shader (includes texture coordinates)
 local vertexShaderSource = [[
@@ -76,7 +97,7 @@ void main() {
 -- Create and compile vertex shader
 local vertexShader = gl.create_shader(gl.VERTEX_SHADER)
 gl.shader_source(vertexShader, vertexShaderSource)
-success, err = gl.compile_shader(vertexShader)
+local success, err = gl.compile_shader(vertexShader)
 if not success then
     lua_util.log("Vertex shader compilation failed: " .. err)
     gl.destroy()
@@ -106,6 +127,18 @@ if not success then
     sdl.quit()
     return
 end
+
+-- Set up texture uniform
+gl.use_program(shaderProgram)
+local texture1_location = gl.get_uniform_location(shaderProgram, "texture1")
+if texture1_location < 0 then
+    lua_util.log("Failed to get uniform location for texture1")
+    gl.destroy()
+    sdl.quit()
+    return
+end
+gl.uniform1i(texture1_location, 0)
+print("Texture1 uniform location: " .. texture1_location)
 
 -- Vertex data for a quad (x, y, s, t)
 local vertices = {
@@ -171,18 +204,29 @@ while running do
     gl.clear(gl.COLOR_BUFFER_BIT)
 
     gl.use_program(shaderProgram)
+    gl.active_texture(gl.TEXTURE0)
     gl.bind_texture(gl.TEXTURE_2D, texture)
+    print("Bound texture in loop: " .. texture)
+    
+    local bound_texture = gl.get_integer(gl.TEXTURE_BINDING_2D)
+    print("Current bound texture: " .. bound_texture)
     gl.bind_vertex_array(vao)
     gl.draw_elements(gl.TRIANGLES, 6, gl.UNSIGNED_INT, 0)
+    local err = gl.get_error()
+    print("err:" .. tostring(err))
+    print("gl.NO_ERROR:" .. tostring(gl.NO_ERROR))
+    if err ~= gl.NO_ERROR then
+        lua_util.log("OpenGL error after glDrawElements: " .. err)
+    end
 
-    
     -- Swap window
     sdl.gl_swap_window(window)
 end
 
 -- Cleanup
 gl.delete_vertex_arrays({vao})
-gl.delete_buffers({vbo,ebo})
+gl.delete_buffers({vbo, ebo})
+gl.delete_textures({texture})
 gl.delete_shader(vertexShader)
 gl.delete_shader(fragmentShader)
 gl.delete_program(shaderProgram)
